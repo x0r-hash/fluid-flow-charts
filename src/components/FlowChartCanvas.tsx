@@ -110,6 +110,8 @@ export default function FlowChartCanvas({
   const particlesRef = useRef<Particle[]>([]);
   const animRef = useRef<number>(0);
   const nodeMapRef = useRef<Map<string, FlowNode>>(new Map());
+  const animatedValuesRef = useRef<Map<string, number>>(new Map());
+  const timeRef = useRef<number>(0);
 
   useEffect(() => {
     const map = new Map<string, FlowNode>();
@@ -248,47 +250,97 @@ export default function FlowChartCanvas({
         }
       } else if (node.type === "metric" || node.type === "process") {
         const size = node.size || 60;
+        const shape = node.shape || "circle";
+        const animSpeed = node.animationSpeed || 1;
 
-        // Selection ring
-        if (isSelected || isConnecting) {
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, size + 8, 0, Math.PI * 2);
-          ctx.strokeStyle = COLOR_MAP_SELECTED[color];
-          ctx.lineWidth = 2;
-          ctx.setLineDash([6, 4]);
-          ctx.stroke();
-          ctx.setLineDash([]);
+        // Update animated value
+        if (node.animateValue) {
+          if (!animatedValuesRef.current.has(node.id)) {
+            const baseValue = typeof node.value === "number" ? node.value : 0;
+            animatedValuesRef.current.set(node.id, baseValue);
+          }
+          const currentAnimated = animatedValuesRef.current.get(node.id) || 0;
+          const increment = (animSpeed * Math.random()) * 0.5;
+          animatedValuesRef.current.set(node.id, currentAnimated + increment);
         }
 
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, size + 4, 0, Math.PI * 2);
-        ctx.strokeStyle = dimColor;
-        ctx.lineWidth = 1;
-        ctx.stroke();
+        const displayValue = node.animateValue 
+          ? Math.floor(animatedValuesRef.current.get(node.id) || 0)
+          : node.value;
 
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, size, 0, Math.PI * 2);
-        ctx.fillStyle = "hsla(222, 47%, 6%, 0.9)";
-        ctx.fill();
-        ctx.strokeStyle = coreColor;
-        ctx.lineWidth = 2;
-        ctx.globalAlpha = 0.6;
-        ctx.stroke();
-        ctx.globalAlpha = 1;
+        if (shape === "circle") {
+          // Selection ring
+          if (isSelected || isConnecting) {
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, size + 8, 0, Math.PI * 2);
+            ctx.strokeStyle = COLOR_MAP_SELECTED[color];
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
 
-        const gradient = ctx.createRadialGradient(node.x, node.y, size * 0.5, node.x, node.y, size * 1.3);
-        gradient.addColorStop(0, "transparent");
-        gradient.addColorStop(1, dimColor);
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, size * 1.3, 0, Math.PI * 2);
-        ctx.fillStyle = gradient;
-        ctx.fill();
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, size + 4, 0, Math.PI * 2);
+          ctx.strokeStyle = dimColor;
+          ctx.lineWidth = 1;
+          ctx.stroke();
 
-        if (node.value !== undefined) {
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, size, 0, Math.PI * 2);
+          ctx.fillStyle = "hsla(222, 47%, 6%, 0.9)";
+          ctx.fill();
+          ctx.strokeStyle = coreColor;
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = 0.6;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+
+          const gradient = ctx.createRadialGradient(node.x, node.y, size * 0.5, node.x, node.y, size * 1.3);
+          gradient.addColorStop(0, "transparent");
+          gradient.addColorStop(1, dimColor);
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, size * 1.3, 0, Math.PI * 2);
+          ctx.fillStyle = gradient;
+          ctx.fill();
+        } else {
+          // Rectangle shape
+          const rectWidth = size * 1.8;
+          const rectHeight = size * 1.2;
+          const rectX = node.x - rectWidth / 2;
+          const rectY = node.y - rectHeight / 2;
+
+          // Selection ring
+          if (isSelected || isConnecting) {
+            ctx.strokeStyle = COLOR_MAP_SELECTED[color];
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 4]);
+            ctx.strokeRect(rectX - 6, rectY - 6, rectWidth + 12, rectHeight + 12);
+            ctx.setLineDash([]);
+          }
+
+          // Background
+          ctx.fillStyle = "hsla(222, 47%, 6%, 0.9)";
+          ctx.fillRect(rectX, rectY, rectWidth, rectHeight);
+
+          // Border
+          ctx.strokeStyle = coreColor;
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = 0.6;
+          ctx.strokeRect(rectX, rectY, rectWidth, rectHeight);
+          ctx.globalAlpha = 1;
+
+          // Outer ring
+          ctx.strokeStyle = dimColor;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(rectX - 2, rectY - 2, rectWidth + 4, rectHeight + 4);
+        }
+
+        if (displayValue !== undefined) {
           ctx.font = "700 22px 'JetBrains Mono', monospace";
           ctx.fillStyle = coreColor;
           ctx.textAlign = "center";
-          ctx.fillText(String(node.value), node.x, node.y + 2);
+          ctx.fillText(String(displayValue), node.x, node.y + 2);
         }
 
         if (node.subLabel) {
@@ -318,6 +370,9 @@ export default function FlowChartCanvas({
       ctx.textAlign = "start";
       ctx.fillText("⚡ Click a node to connect", 20, height - 20);
     }
+
+    // Increment time for animations
+    timeRef.current += 1;
 
     animRef.current = requestAnimationFrame(draw);
   }, [data, width, height, selectedNodeId, selectedEdgeId, selectedCategoryId, connectingFrom]);

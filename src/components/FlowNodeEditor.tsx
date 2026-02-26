@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const COLOR_OPTIONS: { value: ColorOption; label: string; swatch: string }[] = [
   { value: "cyan", label: "Cyan", swatch: "hsl(185, 100%, 50%)" },
@@ -131,6 +132,20 @@ export default function FlowNodeEditor({ node, onSave, onClose }: FlowNodeEditor
                   />
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-xs font-mono">SHAPE</Label>
+                <Select value={form.shape || "circle"} onValueChange={(v) => update("shape", v as "circle" | "rectangle")}>
+                  <SelectTrigger className="bg-background border-border font-mono text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="circle">Circle</SelectItem>
+                    <SelectItem value="rectangle">Rectangle</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label className="text-muted-foreground text-xs font-mono">SUB LABEL</Label>
                 <Input
@@ -138,6 +153,35 @@ export default function FlowNodeEditor({ node, onSave, onClose }: FlowNodeEditor
                   onChange={(e) => update("subLabel", e.target.value)}
                   className="bg-background border-border font-mono text-sm"
                 />
+              </div>
+
+              <div className="space-y-3 border-t border-border pt-3">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="animate"
+                    checked={form.animateValue || false}
+                    onCheckedChange={(checked) => update("animateValue", !!checked)}
+                  />
+                  <Label htmlFor="animate" className="text-muted-foreground text-xs font-mono cursor-pointer">
+                    ANIMATE VALUE
+                  </Label>
+                </div>
+
+                {form.animateValue && (
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs font-mono">ANIMATION SPEED</Label>
+                    <Input
+                      type="number"
+                      min="0.1"
+                      max="10"
+                      step="0.1"
+                      value={form.animationSpeed ?? 1}
+                      onChange={(e) => update("animationSpeed", parseFloat(e.target.value) || 1)}
+                      className="bg-background border-border font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">Lower = slower, Higher = faster</p>
+                  </div>
+                )}
               </div>
             </>
           )}

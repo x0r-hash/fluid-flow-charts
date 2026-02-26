@@ -8,6 +8,9 @@ export interface FlowNode {
   subLabel?: string;
   color?: "cyan" | "purple" | "green" | "orange" | "red" | "yellow" | "blue" | "pink" | "gray" | "lime";
   size?: number;
+  shape?: "circle" | "rectangle";
+  animateValue?: boolean;
+  animationSpeed?: number;
 }
 
 export interface FlowEdge {
