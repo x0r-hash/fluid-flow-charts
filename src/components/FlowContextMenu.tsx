@@ -17,6 +17,12 @@ const COLORS: { value: ColorOption; label: string; swatch: string }[] = [
   { value: "purple", label: "Purple", swatch: "hsl(270, 80%, 60%)" },
   { value: "green", label: "Green", swatch: "hsl(155, 100%, 50%)" },
   { value: "orange", label: "Orange", swatch: "hsl(35, 100%, 55%)" },
+  { value: "red", label: "Red", swatch: "hsl(0, 100%, 50%)" },
+  { value: "yellow", label: "Yellow", swatch: "hsl(60, 100%, 50%)" },
+  { value: "blue", label: "Blue", swatch: "hsl(220, 100%, 50%)" },
+  { value: "pink", label: "Pink", swatch: "hsl(320, 100%, 50%)" },
+  { value: "gray", label: "Gray", swatch: "hsl(0, 0%, 60%)" },
+  { value: "lime", label: "Lime", swatch: "hsl(120, 100%, 50%)" },
 ];
 
 const NODE_TYPES: { value: FlowNode["type"]; label: string }[] = [
@@ -38,6 +44,7 @@ interface FlowContextMenuProps {
   onDeleteEdge: (edgeId: string) => void;
   onChangeEdgeColor: (edgeId: string, color: ColorOption) => void;
   onStartConnect: (nodeId: string) => void;
+  onAddCategory: (x: number, y: number, color: ColorOption) => void;
 }
 
 export default function FlowContextMenu({
@@ -52,6 +59,7 @@ export default function FlowContextMenu({
   onDeleteEdge,
   onChangeEdgeColor,
   onStartConnect,
+  onAddCategory,
 }: FlowContextMenuProps) {
   return (
     <ContextMenu>
@@ -151,6 +159,27 @@ export default function FlowContextMenu({
                   >
                     <Circle className="w-3 h-3" />
                     {t.label}
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+            <ContextMenuSub>
+              <ContextMenuSubTrigger className="gap-2 cursor-pointer">
+                <Plus className="w-4 h-4" />
+                Add Category
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent className="bg-card border-border">
+                {COLORS.map((c) => (
+                  <ContextMenuItem
+                    key={c.value}
+                    onClick={() => onAddCategory(contextPos.x, contextPos.y, c.value)}
+                    className="gap-2 cursor-pointer"
+                  >
+                    <span
+                      className="w-3 h-3 rounded-full inline-block"
+                      style={{ background: c.swatch }}
+                    />
+                    {c.label}
                   </ContextMenuItem>
                 ))}
               </ContextMenuSubContent>

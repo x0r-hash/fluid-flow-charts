@@ -1,14 +1,16 @@
 import { useState, useCallback, useRef } from "react";
-import { FlowData, FlowNode, FlowEdge } from "@/types/flow";
+import { FlowData, FlowNode, FlowEdge, FlowCategory } from "@/types/flow";
 
-export type ColorOption = "cyan" | "purple" | "green" | "orange";
+export type ColorOption = "cyan" | "purple" | "green" | "orange" | "red" | "yellow" | "blue" | "pink" | "gray" | "lime";
 
 export interface FlowEditorState {
   selectedNodeId: string | null;
   selectedEdgeId: string | null;
+  selectedCategoryId: string | null;
   isDragging: boolean;
   connectingFrom: string | null;
   editingNode: FlowNode | null;
+  editingCategory: FlowCategory | null;
 }
 
 export function useFlowEditor(initialData: FlowData) {
@@ -16,9 +18,11 @@ export function useFlowEditor(initialData: FlowData) {
   const [state, setState] = useState<FlowEditorState>({
     selectedNodeId: null,
     selectedEdgeId: null,
+    selectedCategoryId: null,
     isDragging: false,
     connectingFrom: null,
     editingNode: null,
+    editingCategory: null,
   });
 
   const dragOffsetRef = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
@@ -70,6 +74,20 @@ export function useFlowEditor(initialData: FlowData) {
     [flowData.nodes, flowData.edges]
   );
 
+  const findCategoryAt = useCallback(
+    (x: number, y: number): FlowCategory | null => {
+      if (!flowData.categories) return null;
+      // Approximate hit box for category text (width varies, so use generous bounds)
+      for (const cat of flowData.categories) {
+        if (x >= cat.x - 16 && x <= cat.x + 200 && y >= cat.y - 14 && y <= cat.y + 8) {
+          return cat;
+        }
+      }
+      return null;
+    },
+    [flowData.categories]
+  );
+
   // Drag
   const startDrag = useCallback(
     (nodeId: string, mouseX: number, mouseY: number) => {
@@ -99,13 +117,42 @@ export function useFlowEditor(initialData: FlowData) {
     setState((s) => ({ ...s, isDragging: false }));
   }, []);
 
+  // Category drag
+  const startCategoryDrag = useCallback(
+    (categoryId: string, mouseX: number, mouseY: number) => {
+      const category = flowData.categories?.find((c) => c.id === categoryId);
+      if (!category) return;
+      dragOffsetRef.current = { dx: mouseX - category.x, dy: mouseY - category.y };
+      setState((s) => ({ ...s, selectedCategoryId: categoryId, isDragging: true }));
+    },
+    [flowData.categories]
+  );
+
+  const dragCategory = useCallback(
+    (mouseX: number, mouseY: number) => {
+      if (!state.isDragging || !state.selectedCategoryId) return;
+      const { dx, dy } = dragOffsetRef.current;
+      setFlowData((prev) => ({
+        ...prev,
+        categories: prev.categories?.map((c) =>
+          c.id === state.selectedCategoryId ? { ...c, x: mouseX - dx, y: mouseY - dy } : c
+        ),
+      }));
+    },
+    [state.isDragging, state.selectedCategoryId]
+  );
+
   // Select
   const selectNode = useCallback((nodeId: string | null) => {
-    setState((s) => ({ ...s, selectedNodeId: nodeId, selectedEdgeId: null }));
+    setState((s) => ({ ...s, selectedNodeId: nodeId, selectedEdgeId: null, selectedCategoryId: null }));
   }, []);
 
   const selectEdge = useCallback((edgeId: string | null) => {
-    setState((s) => ({ ...s, selectedEdgeId: edgeId, selectedNodeId: null }));
+    setState((s) => ({ ...s, selectedEdgeId: edgeId, selectedNodeId: null, selectedCategoryId: null }));
+  }, []);
+
+  const selectCategory = useCallback((categoryId: string | null) => {
+    setState((s) => ({ ...s, selectedCategoryId: categoryId, selectedNodeId: null, selectedEdgeId: null }));
   }, []);
 
   // Edit node
@@ -128,6 +175,30 @@ export function useFlowEditor(initialData: FlowData) {
         nodes: prev.nodes.map((n) => (n.id === updatedNode.id ? updatedNode : n)),
       }));
       setState((s) => ({ ...s, editingNode: null }));
+    },
+    []
+  );
+
+  // Edit category
+  const openEditCategory = useCallback(
+    (categoryId: string) => {
+      const category = flowData.categories?.find((c) => c.id === categoryId);
+      if (category) setState((s) => ({ ...s, editingCategory: { ...category } }));
+    },
+    [flowData.categories]
+  );
+
+  const closeEditCategory = useCallback(() => {
+    setState((s) => ({ ...s, editingCategory: null }));
+  }, []);
+
+  const saveEditCategory = useCallback(
+    (updatedCategory: FlowCategory) => {
+      setFlowData((prev) => ({
+        ...prev,
+        categories: prev.categories?.map((c) => (c.id === updatedCategory.id ? updatedCategory : c)),
+      }));
+      setState((s) => ({ ...s, editingCategory: null }));
     },
     []
   );
@@ -216,22 +287,50 @@ export function useFlowEditor(initialData: FlowData) {
     setState((s) => ({ ...s, connectingFrom: null }));
   }, []);
 
+  // Add category
+  const addCategory = useCallback(
+    (x: number, y: number, color: ColorOption = "cyan") => {
+      const id = `cat-${Date.now()}`;
+      const newCategory: FlowCategory = {
+        id,
+        label: "NEW CATEGORY",
+        x,
+        y,
+        color,
+      };
+      setFlowData((prev) => ({
+        ...prev,
+        categories: [...(prev.categories || []), newCategory],
+      }));
+      return id;
+    },
+    []
+  );
+
   return {
     flowData,
     state,
     findNodeAt,
     findEdgeAt,
+    findCategoryAt,
     startDrag,
     drag,
     endDrag,
+    startCategoryDrag,
+    dragCategory,
     selectNode,
     selectEdge,
+    selectCategory,
     openEditNode,
     closeEditNode,
     saveEditNode,
+    openEditCategory,
+    closeEditCategory,
+    saveEditCategory,
     addNode,
     removeNode,
     changeNodeColor,
+    addCategory,
     addEdge,
     removeEdge,
     changeEdgeColor,

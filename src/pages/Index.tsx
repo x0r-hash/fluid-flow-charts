@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import DashboardNav from "@/components/DashboardNav";
 import FlowChartCanvas from "@/components/FlowChartCanvas";
 import FlowNodeEditor from "@/components/FlowNodeEditor";
+import FlowCategoryEditor from "@/components/FlowCategoryEditor";
 import FlowContextMenu from "@/components/FlowContextMenu";
 import { mockFlowData } from "@/data/mockFlowData";
 import { FlowNode, FlowEdge } from "@/types/flow";
@@ -46,6 +47,7 @@ const Index = () => {
       if (e.button !== 0) return; // left click only
       const pos = getCanvasPos(e);
       const node = editor.findNodeAt(pos.x, pos.y);
+      const category = editor.findCategoryAt(pos.x, pos.y);
 
       if (editor.state.connectingFrom) {
         if (node) {
@@ -59,6 +61,8 @@ const Index = () => {
 
       if (node) {
         editor.startDrag(node.id, pos.x, pos.y);
+      } else if (category) {
+        editor.startCategoryDrag(category.id, pos.x, pos.y);
       } else {
         const edge = editor.findEdgeAt(pos.x, pos.y);
         if (edge) {
@@ -66,6 +70,7 @@ const Index = () => {
         } else {
           editor.selectNode(null);
           editor.selectEdge(null);
+          editor.selectCategory(null);
         }
       }
     },
@@ -76,7 +81,11 @@ const Index = () => {
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       if (editor.state.isDragging) {
         const pos = getCanvasPos(e);
-        editor.drag(pos.x, pos.y);
+        if (editor.state.selectedNodeId) {
+          editor.drag(pos.x, pos.y);
+        } else if (editor.state.selectedCategoryId) {
+          editor.dragCategory(pos.x, pos.y);
+        }
       }
     },
     [editor, getCanvasPos]
@@ -90,8 +99,12 @@ const Index = () => {
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const pos = getCanvasPos(e);
       const node = editor.findNodeAt(pos.x, pos.y);
+      const category = editor.findCategoryAt(pos.x, pos.y);
+      
       if (node) {
         editor.openEditNode(node.id);
+      } else if (category) {
+        editor.openEditCategory(category.id);
       }
     },
     [editor, getCanvasPos]
@@ -111,6 +124,14 @@ const Index = () => {
     (x: number, y: number, type: FlowNode["type"]) => {
       editor.addNode(x, y, type);
       toast.success("Node added — double-click to edit");
+    },
+    [editor]
+  );
+
+  const handleAddCategory = useCallback(
+    (x: number, y: number, color: "cyan" | "purple" | "green" | "orange") => {
+      editor.addCategory(x, y, color);
+      toast.success("Category added — double-click to edit");
     },
     [editor]
   );
@@ -154,6 +175,7 @@ const Index = () => {
           onDeleteEdge={handleDeleteEdge}
           onChangeEdgeColor={editor.changeEdgeColor}
           onStartConnect={handleStartConnect}
+          onAddCategory={handleAddCategory}
         >
           <FlowChartCanvas
             data={editor.flowData}
@@ -161,6 +183,7 @@ const Index = () => {
             height={dimensions.height}
             selectedNodeId={editor.state.selectedNodeId}
             selectedEdgeId={editor.state.selectedEdgeId}
+            selectedCategoryId={editor.state.selectedCategoryId}
             connectingFrom={editor.state.connectingFrom}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
@@ -175,6 +198,14 @@ const Index = () => {
             node={editor.state.editingNode}
             onSave={editor.saveEditNode}
             onClose={editor.closeEditNode}
+          />
+        )}
+
+        {editor.state.editingCategory && (
+          <FlowCategoryEditor
+            category={editor.state.editingCategory}
+            onSave={editor.saveEditCategory}
+            onClose={editor.closeEditCategory}
           />
         )}
       </main>

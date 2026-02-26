@@ -24,6 +24,12 @@ const COLOR_OPTIONS: { value: ColorOption; label: string; swatch: string }[] = [
   { value: "purple", label: "Purple", swatch: "hsl(270, 80%, 60%)" },
   { value: "green", label: "Green", swatch: "hsl(155, 100%, 50%)" },
   { value: "orange", label: "Orange", swatch: "hsl(35, 100%, 55%)" },
+  { value: "red", label: "Red", swatch: "hsl(0, 100%, 50%)" },
+  { value: "yellow", label: "Yellow", swatch: "hsl(60, 100%, 50%)" },
+  { value: "blue", label: "Blue", swatch: "hsl(220, 100%, 50%)" },
+  { value: "pink", label: "Pink", swatch: "hsl(320, 100%, 50%)" },
+  { value: "gray", label: "Gray", swatch: "hsl(0, 0%, 60%)" },
+  { value: "lime", label: "Lime", swatch: "hsl(120, 100%, 50%)" },
 ];
 
 const TYPE_OPTIONS: { value: FlowNode["type"]; label: string }[] = [

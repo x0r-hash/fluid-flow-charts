@@ -6,7 +6,7 @@ export interface FlowNode {
   type: "source" | "process" | "metric" | "destination";
   value?: string | number;
   subLabel?: string;
-  color?: "cyan" | "purple" | "green" | "orange";
+  color?: "cyan" | "purple" | "green" | "orange" | "red" | "yellow" | "blue" | "pink" | "gray" | "lime";
   size?: number;
 }
 
@@ -14,7 +14,7 @@ export interface FlowEdge {
   id: string;
   from: string;
   to: string;
-  color?: "cyan" | "purple" | "green" | "orange";
+  color?: "cyan" | "purple" | "green" | "orange" | "red" | "yellow" | "blue" | "pink" | "gray" | "lime";
   particleCount?: number;
   speed?: number;
 }
@@ -24,7 +24,7 @@ export interface FlowCategory {
   label: string;
   x: number;
   y: number;
-  color: "cyan" | "purple" | "green" | "orange";
+  color: "cyan" | "purple" | "green" | "orange" | "red" | "yellow" | "blue" | "pink" | "gray" | "lime";
 }
 
 export interface FlowData {

@@ -6,6 +6,12 @@ const COLOR_MAP: Record<string, string> = {
   purple: "hsl(270, 80%, 60%)",
   green: "hsl(155, 100%, 50%)",
   orange: "hsl(35, 100%, 55%)",
+  red: "hsl(0, 100%, 50%)",
+  yellow: "hsl(60, 100%, 50%)",
+  blue: "hsl(220, 100%, 50%)",
+  pink: "hsl(320, 100%, 50%)",
+  gray: "hsl(0, 0%, 60%)",
+  lime: "hsl(120, 100%, 50%)",
 };
 
 const COLOR_MAP_DIM: Record<string, string> = {
@@ -13,6 +19,12 @@ const COLOR_MAP_DIM: Record<string, string> = {
   purple: "hsla(270, 80%, 60%, 0.15)",
   green: "hsla(155, 100%, 50%, 0.15)",
   orange: "hsla(35, 100%, 55%, 0.15)",
+  red: "hsla(0, 100%, 50%, 0.15)",
+  yellow: "hsla(60, 100%, 50%, 0.15)",
+  blue: "hsla(220, 100%, 50%, 0.15)",
+  pink: "hsla(320, 100%, 50%, 0.15)",
+  gray: "hsla(0, 0%, 60%, 0.15)",
+  lime: "hsla(120, 100%, 50%, 0.15)",
 };
 
 const COLOR_MAP_GLOW: Record<string, string> = {
@@ -20,6 +32,12 @@ const COLOR_MAP_GLOW: Record<string, string> = {
   purple: "hsla(270, 80%, 70%, 0.8)",
   green: "hsla(155, 100%, 60%, 0.8)",
   orange: "hsla(35, 100%, 65%, 0.8)",
+  red: "hsla(0, 100%, 60%, 0.8)",
+  yellow: "hsla(60, 100%, 60%, 0.8)",
+  blue: "hsla(220, 100%, 60%, 0.8)",
+  pink: "hsla(320, 100%, 60%, 0.8)",
+  gray: "hsla(0, 0%, 70%, 0.8)",
+  lime: "hsla(120, 100%, 60%, 0.8)",
 };
 
 const COLOR_MAP_SELECTED: Record<string, string> = {
@@ -27,6 +45,12 @@ const COLOR_MAP_SELECTED: Record<string, string> = {
   purple: "hsla(270, 80%, 70%, 0.5)",
   green: "hsla(155, 100%, 60%, 0.5)",
   orange: "hsla(35, 100%, 65%, 0.5)",
+  red: "hsla(0, 100%, 60%, 0.5)",
+  yellow: "hsla(60, 100%, 60%, 0.5)",
+  blue: "hsla(220, 100%, 60%, 0.5)",
+  pink: "hsla(320, 100%, 60%, 0.5)",
+  gray: "hsla(0, 0%, 70%, 0.5)",
+  lime: "hsla(120, 100%, 60%, 0.5)",
 };
 
 interface Particle {
@@ -35,12 +59,13 @@ interface Particle {
   edgeId: string;
 }
 
-interface FlowChartCanvasProps {
+export interface FlowChartCanvasProps {
   data: FlowData;
   width?: number;
   height?: number;
   selectedNodeId?: string | null;
   selectedEdgeId?: string | null;
+  selectedCategoryId?: string | null;
   connectingFrom?: string | null;
   onMouseDown?: (e: React.MouseEvent<HTMLCanvasElement>) => void;
   onMouseMove?: (e: React.MouseEvent<HTMLCanvasElement>) => void;
@@ -73,6 +98,7 @@ export default function FlowChartCanvas({
   height = 660,
   selectedNodeId,
   selectedEdgeId,
+  selectedCategoryId,
   connectingFrom,
   onMouseDown,
   onMouseMove,
@@ -169,6 +195,8 @@ export default function FlowChartCanvas({
     // Draw categories
     data.categories?.forEach((cat) => {
       const color = COLOR_MAP[cat.color];
+      const isSelected = selectedCategoryId === cat.id;
+      
       ctx.font = "600 11px 'JetBrains Mono', monospace";
       ctx.fillStyle = color;
       ctx.fillText(cat.label, cat.x, cat.y);
@@ -177,8 +205,18 @@ export default function FlowChartCanvas({
       ctx.lineTo(cat.x + ctx.measureText(cat.label).width, cat.y + 4);
       ctx.strokeStyle = color;
       ctx.lineWidth = 1;
-      ctx.globalAlpha = 0.3;
+      ctx.globalAlpha = isSelected ? 0.8 : 0.3;
       ctx.stroke();
+      
+      if (isSelected) {
+        const textWidth = ctx.measureText(cat.label).width;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.strokeRect(cat.x - 8, cat.y - 12, textWidth + 16, 20);
+        ctx.setLineDash([]);
+      }
+      
       ctx.globalAlpha = 1;
     });
 
@@ -282,7 +320,7 @@ export default function FlowChartCanvas({
     }
 
     animRef.current = requestAnimationFrame(draw);
-  }, [data, width, height, selectedNodeId, selectedEdgeId, connectingFrom]);
+  }, [data, width, height, selectedNodeId, selectedEdgeId, selectedCategoryId, connectingFrom]);
 
   useEffect(() => {
     animRef.current = requestAnimationFrame(draw);
