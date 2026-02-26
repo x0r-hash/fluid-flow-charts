@@ -4,8 +4,9 @@ import FlowChartCanvas from "@/components/FlowChartCanvas";
 import FlowNodeEditor from "@/components/FlowNodeEditor";
 import FlowCategoryEditor from "@/components/FlowCategoryEditor";
 import FlowContextMenu from "@/components/FlowContextMenu";
+import DataManager from "@/components/DataManager";
 import { mockFlowData } from "@/data/mockFlowData";
-import { FlowNode, FlowEdge } from "@/types/flow";
+import { FlowNode, FlowEdge, FlowData } from "@/types/flow";
 import { useFlowEditor } from "@/hooks/useFlowEditor";
 import { toast } from "sonner";
 
@@ -14,6 +15,16 @@ const Index = () => {
   const [dimensions, setDimensions] = useState({ width: 1200, height: 660 });
 
   const editor = useFlowEditor(mockFlowData);
+
+  const handleDataChange = useCallback((newData: FlowData) => {
+    editor.loadFlowData(newData);
+    toast.info("Graph configuration updated");
+  }, [editor]);
+
+  const handleReset = useCallback(() => {
+    editor.loadFlowData(mockFlowData);
+    toast.info("Reset to default data");
+  }, [editor]);
 
   const [contextTarget, setContextTarget] = useState<{
     node: FlowNode | null;
@@ -162,7 +173,14 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <DashboardNav />
+      <div className="flex justify-between items-center">
+        <DashboardNav />
+        <DataManager 
+          data={editor.flowData}
+          onDataChange={handleDataChange}
+          onReset={handleReset}
+        />
+      </div>
       <main ref={containerRef} className="flex-1 overflow-hidden p-2 relative">
         <FlowContextMenu
           targetNode={contextTarget.node}

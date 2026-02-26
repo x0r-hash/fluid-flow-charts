@@ -307,6 +307,19 @@ export function useFlowEditor(initialData: FlowData) {
     []
   );
 
+  const loadFlowData = useCallback((newData: FlowData) => {
+    setFlowData(newData);
+    setState({
+      selectedNodeId: null,
+      selectedEdgeId: null,
+      selectedCategoryId: null,
+      isDragging: false,
+      connectingFrom: null,
+      editingNode: null,
+      editingCategory: null,
+    });
+  }, []);
+
   return {
     flowData,
     state,
@@ -337,5 +350,6 @@ export function useFlowEditor(initialData: FlowData) {
     startConnect,
     endConnect,
     cancelConnect,
+    loadFlowData,
   };
 }
