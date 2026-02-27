@@ -65,10 +65,10 @@ export const mockFlowData: FlowData = {
     { id: "e5", from: "src-5", to: "proc-events", color: "cyan", particleCount: 7, speed: 1.1 },
 
     // Events to pipeline
-    { id: "e6", from: "proc-events", to: "proc-pipeline", color: "cyan", particleCount: 12, speed: 1.3 },
+    { id: "e6", from: "proc-events", to: "proc-pipeline", color: "cyan", particleCount: 12, speed: 1.3, label: "19.6k/s" },
 
     // Pipeline to tagged
-    { id: "e7", from: "proc-pipeline", to: "proc-tagged", color: "purple", particleCount: 8, speed: 1.0 },
+    { id: "e7", from: "proc-pipeline", to: "proc-tagged", color: "purple", particleCount: 8, speed: 1.0, label: "filtered" },
 
     // Tagged to destinations
     { id: "e8", from: "proc-tagged", to: "dest-1", color: "purple", particleCount: 4, speed: 1.2 },

@@ -17,6 +17,7 @@ export interface FlowEdge {
   id: string;
   from: string;
   to: string;
+  label?: string;
   color?: "cyan" | "purple" | "green" | "orange" | "red" | "yellow" | "blue" | "pink" | "gray" | "lime";
   particleCount?: number;
   speed?: number;

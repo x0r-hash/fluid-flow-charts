@@ -4,6 +4,7 @@ import FlowChartCanvas from "@/components/FlowChartCanvas";
 import FlowNodeEditor from "@/components/FlowNodeEditor";
 import FlowCategoryEditor from "@/components/FlowCategoryEditor";
 import FlowContextMenu from "@/components/FlowContextMenu";
+import FlowTooltip from "@/components/FlowTooltip";
 import DataManager from "@/components/DataManager";
 import { mockFlowData } from "@/data/mockFlowData";
 import { FlowNode, FlowEdge, FlowData } from "@/types/flow";
@@ -13,6 +14,7 @@ import { toast } from "sonner";
 const Index = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 1200, height: 660 });
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   const editor = useFlowEditor(mockFlowData);
 
@@ -45,6 +47,49 @@ const Index = () => {
     return () => window.removeEventListener("resize", updateSize);
   }, []);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger when editing in dialogs/inputs
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        editor.removeSelectedNodes();
+        toast.success("Deleted");
+      } else if (e.key === "Escape") {
+        editor.cancelConnect();
+        editor.selectNode(null);
+        editor.selectEdge(null);
+        editor.selectCategory(null);
+      } else if (e.key === "a" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        editor.selectAll();
+        toast.info("All nodes selected");
+      } else if (e.key === "z" && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+        e.preventDefault();
+        editor.redo();
+      } else if (e.key === "z" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        editor.undo();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        editor.nudgeNodes(0, -10);
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        editor.nudgeNodes(0, 10);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        editor.nudgeNodes(-10, 0);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        editor.nudgeNodes(10, 0);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [editor]);
+
   const getCanvasPos = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const rect = e.currentTarget.getBoundingClientRect();
@@ -55,7 +100,7 @@ const Index = () => {
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (e.button !== 0) return; // left click only
+      if (e.button !== 0) return;
       const pos = getCanvasPos(e);
       const node = editor.findNodeAt(pos.x, pos.y);
       const category = editor.findCategoryAt(pos.x, pos.y);
@@ -71,7 +116,7 @@ const Index = () => {
       }
 
       if (node) {
-        editor.startDrag(node.id, pos.x, pos.y);
+        editor.startDrag(node.id, pos.x, pos.y, e.shiftKey);
       } else if (category) {
         editor.startCategoryDrag(category.id, pos.x, pos.y);
       } else {
@@ -90,8 +135,14 @@ const Index = () => {
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
+      const pos = getCanvasPos(e);
+      setMousePos(pos);
+
+      // Hover detection
+      const node = editor.findNodeAt(pos.x, pos.y);
+      editor.setHoveredNode(node?.id || null);
+
       if (editor.state.isDragging) {
-        const pos = getCanvasPos(e);
         if (editor.state.selectedNodeId) {
           editor.drag(pos.x, pos.y);
         } else if (editor.state.selectedCategoryId) {
@@ -111,7 +162,7 @@ const Index = () => {
       const pos = getCanvasPos(e);
       const node = editor.findNodeAt(pos.x, pos.y);
       const category = editor.findCategoryAt(pos.x, pos.y);
-      
+
       if (node) {
         editor.openEditNode(node.id);
       } else if (category) {
@@ -171,11 +222,16 @@ const Index = () => {
     [editor]
   );
 
+  // Get hovered node for tooltip
+  const hoveredNode = editor.state.hoveredNodeId
+    ? editor.flowData.nodes.find((n) => n.id === editor.state.hoveredNodeId) || null
+    : null;
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex justify-between items-center">
         <DashboardNav />
-        <DataManager 
+        <DataManager
           data={editor.flowData}
           onDataChange={handleDataChange}
           onReset={handleReset}
@@ -200,9 +256,12 @@ const Index = () => {
             width={dimensions.width}
             height={dimensions.height}
             selectedNodeId={editor.state.selectedNodeId}
+            selectedNodeIds={editor.state.selectedNodeIds}
             selectedEdgeId={editor.state.selectedEdgeId}
             selectedCategoryId={editor.state.selectedCategoryId}
             connectingFrom={editor.state.connectingFrom}
+            hoveredNodeId={editor.state.hoveredNodeId}
+            getNodeAnimations={editor.getNodeAnimations}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -210,6 +269,16 @@ const Index = () => {
             onContextMenu={handleContextMenu}
           />
         </FlowContextMenu>
+
+        {/* Hover tooltip */}
+        {hoveredNode && !editor.state.isDragging && (
+          <FlowTooltip
+            node={hoveredNode}
+            mouseX={mousePos.x}
+            mouseY={mousePos.y}
+            flowData={editor.flowData}
+          />
+        )}
 
         {editor.state.editingNode && (
           <FlowNodeEditor

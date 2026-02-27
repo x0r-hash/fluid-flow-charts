@@ -59,14 +59,24 @@ interface Particle {
   edgeId: string;
 }
 
+interface NodeAnimation {
+  nodeId: string;
+  type: "enter" | "exit";
+  progress: number;
+  startTime: number;
+}
+
 export interface FlowChartCanvasProps {
   data: FlowData;
   width?: number;
   height?: number;
   selectedNodeId?: string | null;
+  selectedNodeIds?: string[];
   selectedEdgeId?: string | null;
   selectedCategoryId?: string | null;
   connectingFrom?: string | null;
+  hoveredNodeId?: string | null;
+  getNodeAnimations?: () => NodeAnimation[];
   onMouseDown?: (e: React.MouseEvent<HTMLCanvasElement>) => void;
   onMouseMove?: (e: React.MouseEvent<HTMLCanvasElement>) => void;
   onMouseUp?: (e: React.MouseEvent<HTMLCanvasElement>) => void;
@@ -92,14 +102,23 @@ function getPointOnCurve(from: { x: number; y: number }, to: { x: number; y: num
   };
 }
 
+function easeOutBack(t: number): number {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+
 export default function FlowChartCanvas({
   data,
   width = 1200,
   height = 660,
   selectedNodeId,
+  selectedNodeIds = [],
   selectedEdgeId,
   selectedCategoryId,
   connectingFrom,
+  hoveredNodeId,
+  getNodeAnimations,
   onMouseDown,
   onMouseMove,
   onMouseUp,
@@ -111,7 +130,6 @@ export default function FlowChartCanvas({
   const animRef = useRef<number>(0);
   const nodeMapRef = useRef<Map<string, FlowNode>>(new Map());
   const animatedValuesRef = useRef<Map<string, number>>(new Map());
-  const timeRef = useRef<number>(0);
 
   useEffect(() => {
     const map = new Map<string, FlowNode>();
@@ -147,6 +165,29 @@ export default function FlowChartCanvas({
     const edgeMap = new Map<string, FlowEdge>();
     data.edges.forEach((e) => edgeMap.set(e.id, e));
 
+    // Get node animations
+    const animations = getNodeAnimations ? getNodeAnimations() : [];
+    const now = performance.now();
+    const animScales = new Map<string, number>();
+    const ANIM_DURATION = 300;
+    
+    // Update animation progress
+    for (let i = animations.length - 1; i >= 0; i--) {
+      const anim = animations[i];
+      const elapsed = now - anim.startTime;
+      anim.progress = Math.min(elapsed / ANIM_DURATION, 1);
+      
+      if (anim.type === "enter") {
+        animScales.set(anim.nodeId, easeOutBack(anim.progress));
+      } else {
+        animScales.set(anim.nodeId, 1 - anim.progress);
+      }
+      
+      if (anim.progress >= 1) {
+        animations.splice(i, 1);
+      }
+    }
+
     // Draw edges
     data.edges.forEach((edge) => {
       const fromNode = nodeMap.get(edge.from);
@@ -165,6 +206,19 @@ export default function FlowChartCanvas({
       ctx.strokeStyle = isSelected ? COLOR_MAP_SELECTED[color] : COLOR_MAP_DIM[color];
       ctx.lineWidth = isSelected ? 4 : 2;
       ctx.stroke();
+
+      // Edge label
+      if (edge.label) {
+        const mid = getPointOnCurve(from, to, 0.5);
+        ctx.font = "500 9px 'JetBrains Mono', monospace";
+        const tw = ctx.measureText(edge.label).width;
+        ctx.fillStyle = "hsla(222, 47%, 8%, 0.85)";
+        ctx.fillRect(mid.x - tw / 2 - 4, mid.y - 8, tw + 8, 14);
+        ctx.fillStyle = COLOR_MAP_GLOW[color];
+        ctx.textAlign = "center";
+        ctx.fillText(edge.label, mid.x, mid.y + 3);
+        ctx.textAlign = "start";
+      }
     });
 
     // Update & draw particles
@@ -198,7 +252,7 @@ export default function FlowChartCanvas({
     data.categories?.forEach((cat) => {
       const color = COLOR_MAP[cat.color];
       const isSelected = selectedCategoryId === cat.id;
-      
+
       ctx.font = "600 11px 'JetBrains Mono', monospace";
       ctx.fillStyle = color;
       ctx.fillText(cat.label, cat.x, cat.y);
@@ -209,7 +263,7 @@ export default function FlowChartCanvas({
       ctx.lineWidth = 1;
       ctx.globalAlpha = isSelected ? 0.8 : 0.3;
       ctx.stroke();
-      
+
       if (isSelected) {
         const textWidth = ctx.measureText(cat.label).width;
         ctx.strokeStyle = color;
@@ -218,7 +272,7 @@ export default function FlowChartCanvas({
         ctx.strokeRect(cat.x - 8, cat.y - 12, textWidth + 16, 20);
         ctx.setLineDash([]);
       }
-      
+
       ctx.globalAlpha = 1;
     });
 
@@ -227,8 +281,26 @@ export default function FlowChartCanvas({
       const color = node.color || "cyan";
       const coreColor = COLOR_MAP[color];
       const dimColor = COLOR_MAP_DIM[color];
-      const isSelected = selectedNodeId === node.id;
+      const isSelected = selectedNodeId === node.id || selectedNodeIds.includes(node.id);
       const isConnecting = connectingFrom === node.id;
+      const isHovered = hoveredNodeId === node.id;
+
+      // Animation scale
+      const scale = animScales.get(node.id) ?? 1;
+      if (scale <= 0) return; // fully exited
+
+      ctx.save();
+      if (scale !== 1) {
+        ctx.translate(node.x, node.y);
+        ctx.scale(scale, scale);
+        ctx.translate(-node.x, -node.y);
+      }
+
+      // Hover glow
+      if (isHovered && !isSelected) {
+        ctx.shadowColor = COLOR_MAP_GLOW[color];
+        ctx.shadowBlur = 20;
+      }
 
       if (node.type === "source" || node.type === "destination") {
         ctx.fillStyle = dimColor;
@@ -237,7 +309,7 @@ export default function FlowChartCanvas({
         ctx.fill();
 
         ctx.font = "400 12px 'Inter', sans-serif";
-        ctx.fillStyle = isSelected ? coreColor : "hsl(210, 40%, 80%)";
+        ctx.fillStyle = isSelected ? coreColor : isHovered ? "hsl(210, 60%, 90%)" : "hsl(210, 40%, 80%)";
         ctx.fillText(node.label, node.x, node.y + 4);
 
         if (isSelected) {
@@ -264,12 +336,11 @@ export default function FlowChartCanvas({
           animatedValuesRef.current.set(node.id, currentAnimated + increment);
         }
 
-        const displayValue = node.animateValue 
+        const displayValue = node.animateValue
           ? Math.floor(animatedValuesRef.current.get(node.id) || 0)
           : node.value;
 
         if (shape === "circle") {
-          // Selection ring
           if (isSelected || isConnecting) {
             ctx.beginPath();
             ctx.arc(node.x, node.y, size + 8, 0, Math.PI * 2);
@@ -304,13 +375,11 @@ export default function FlowChartCanvas({
           ctx.fillStyle = gradient;
           ctx.fill();
         } else {
-          // Rectangle shape
           const rectWidth = size * 1.8;
           const rectHeight = size * 1.2;
           const rectX = node.x - rectWidth / 2;
           const rectY = node.y - rectHeight / 2;
 
-          // Selection ring
           if (isSelected || isConnecting) {
             ctx.strokeStyle = COLOR_MAP_SELECTED[color];
             ctx.lineWidth = 2;
@@ -319,18 +388,15 @@ export default function FlowChartCanvas({
             ctx.setLineDash([]);
           }
 
-          // Background
           ctx.fillStyle = "hsla(222, 47%, 6%, 0.9)";
           ctx.fillRect(rectX, rectY, rectWidth, rectHeight);
 
-          // Border
           ctx.strokeStyle = coreColor;
           ctx.lineWidth = 2;
           ctx.globalAlpha = 0.6;
           ctx.strokeRect(rectX, rectY, rectWidth, rectHeight);
           ctx.globalAlpha = 1;
 
-          // Outer ring
           ctx.strokeStyle = dimColor;
           ctx.lineWidth = 1;
           ctx.strokeRect(rectX - 2, rectY - 2, rectWidth + 4, rectHeight + 4);
@@ -361,6 +427,8 @@ export default function FlowChartCanvas({
         ctx.fillStyle = coreColor;
         ctx.fill();
       }
+
+      ctx.restore();
     });
 
     // Connection mode indicator
@@ -371,11 +439,15 @@ export default function FlowChartCanvas({
       ctx.fillText("⚡ Click a node to connect", 20, height - 20);
     }
 
-    // Increment time for animations
-    timeRef.current += 1;
+    // Keyboard shortcuts hint
+    ctx.font = "400 10px 'JetBrains Mono', monospace";
+    ctx.fillStyle = "hsla(210, 20%, 45%, 0.5)";
+    ctx.textAlign = "end";
+    ctx.fillText("Del · Ctrl+Z · Ctrl+A · Arrow keys", width - 12, height - 10);
+    ctx.textAlign = "start";
 
     animRef.current = requestAnimationFrame(draw);
-  }, [data, width, height, selectedNodeId, selectedEdgeId, selectedCategoryId, connectingFrom]);
+  }, [data, width, height, selectedNodeId, selectedNodeIds, selectedEdgeId, selectedCategoryId, connectingFrom, hoveredNodeId, getNodeAnimations]);
 
   useEffect(() => {
     animRef.current = requestAnimationFrame(draw);
