@@ -1,4 +1,4 @@
-import { FlowNode, FlowEdge } from "@/types/flow";
+import { FlowNode, FlowEdge, FlowCategory } from "@/types/flow";
 import { ColorOption } from "@/hooks/useFlowEditor";
 import {
   ContextMenu,
@@ -36,6 +36,7 @@ interface FlowContextMenuProps {
   children: React.ReactNode;
   targetNode: FlowNode | null;
   targetEdge: FlowEdge | null;
+  targetCategory: FlowCategory | null;
   contextPos: { x: number; y: number };
   onEditNode: (nodeId: string) => void;
   onDeleteNode: (nodeId: string) => void;
@@ -45,12 +46,15 @@ interface FlowContextMenuProps {
   onChangeEdgeColor: (edgeId: string, color: ColorOption) => void;
   onStartConnect: (nodeId: string) => void;
   onAddCategory: (x: number, y: number, color: ColorOption) => void;
+  onEditCategory: (categoryId: string) => void;
+  onDeleteCategory: (categoryId: string) => void;
 }
 
 export default function FlowContextMenu({
   children,
   targetNode,
   targetEdge,
+  targetCategory,
   contextPos,
   onEditNode,
   onDeleteNode,
@@ -60,12 +64,32 @@ export default function FlowContextMenu({
   onChangeEdgeColor,
   onStartConnect,
   onAddCategory,
+  onEditCategory,
+  onDeleteCategory,
 }: FlowContextMenuProps) {
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent className="bg-card border-border text-foreground min-w-[200px] font-mono text-sm">
-        {targetNode ? (
+        {targetCategory ? (
+          <>
+            <ContextMenuItem
+              onClick={() => onEditCategory(targetCategory.id)}
+              className="gap-2 cursor-pointer"
+            >
+              <Pencil className="w-4 h-4" />
+              Edit Category
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onClick={() => onDeleteCategory(targetCategory.id)}
+              className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete Category
+            </ContextMenuItem>
+          </>
+        ) : targetNode ? (
           <>
             <ContextMenuItem
               onClick={() => onEditNode(targetNode.id)}

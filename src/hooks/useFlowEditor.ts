@@ -457,6 +457,22 @@ export function useFlowEditor(initialData: FlowData) {
     [pushUndo]
   );
 
+  // Remove category
+  const removeCategory = useCallback(
+    (categoryId: string) => {
+      pushUndo();
+      setFlowData((prev) => ({
+        ...prev,
+        categories: prev.categories?.filter((c) => c.id !== categoryId),
+      }));
+      setState((s) => ({
+        ...s,
+        selectedCategoryId: s.selectedCategoryId === categoryId ? null : s.selectedCategoryId,
+      }));
+    },
+    [pushUndo]
+  );
+
   const loadFlowData = useCallback((newData: FlowData) => {
     setFlowData(newData);
     setState({
@@ -500,6 +516,7 @@ export function useFlowEditor(initialData: FlowData) {
     nudgeNodes,
     changeNodeColor,
     addCategory,
+    removeCategory,
     addEdge,
     removeEdge,
     changeEdgeColor,

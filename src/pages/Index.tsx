@@ -8,7 +8,7 @@ import FlowTooltip from "@/components/FlowTooltip";
 import FlowStatusBar from "@/components/FlowStatusBar";
 import DataManager from "@/components/DataManager";
 import { mockFlowData } from "@/data/mockFlowData";
-import { FlowNode, FlowEdge, FlowData } from "@/types/flow";
+import { FlowNode, FlowEdge, FlowData, FlowCategory } from "@/types/flow";
 import { useFlowEditor } from "@/hooks/useFlowEditor";
 import { toast } from "sonner";
 
@@ -32,8 +32,9 @@ const Index = () => {
   const [contextTarget, setContextTarget] = useState<{
     node: FlowNode | null;
     edge: FlowEdge | null;
+    category: FlowCategory | null;
     pos: { x: number; y: number };
-  }>({ node: null, edge: null, pos: { x: 0, y: 0 } });
+  }>({ node: null, edge: null, category: null, pos: { x: 0, y: 0 } });
 
   useEffect(() => {
     const updateSize = () => {
@@ -56,8 +57,13 @@ const Index = () => {
 
       if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
-        editor.removeSelectedNodes();
-        toast.success("Deleted");
+        if (editor.state.selectedCategoryId) {
+          editor.removeCategory(editor.state.selectedCategoryId);
+          toast.success("Category deleted");
+        } else {
+          editor.removeSelectedNodes();
+          toast.success("Deleted");
+        }
       } else if (e.key === "Escape") {
         editor.cancelConnect();
         editor.selectNode(null);
@@ -177,8 +183,9 @@ const Index = () => {
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const pos = getCanvasPos(e);
       const node = editor.findNodeAt(pos.x, pos.y);
-      const edge = node ? null : editor.findEdgeAt(pos.x, pos.y);
-      setContextTarget({ node, edge, pos });
+      const category = node ? null : editor.findCategoryAt(pos.x, pos.y);
+      const edge = node ? null : category ? null : editor.findEdgeAt(pos.x, pos.y);
+      setContextTarget({ node, edge, category, pos });
     },
     [editor, getCanvasPos]
   );
@@ -215,6 +222,14 @@ const Index = () => {
     [editor]
   );
 
+  const handleDeleteCategory = useCallback(
+    (categoryId: string) => {
+      editor.removeCategory(categoryId);
+      toast.success("Category deleted");
+    },
+    [editor]
+  );
+
   const handleStartConnect = useCallback(
     (nodeId: string) => {
       editor.startConnect(nodeId);
@@ -242,6 +257,7 @@ const Index = () => {
         <FlowContextMenu
           targetNode={contextTarget.node}
           targetEdge={contextTarget.edge}
+          targetCategory={contextTarget.category}
           contextPos={contextTarget.pos}
           onEditNode={editor.openEditNode}
           onDeleteNode={handleDeleteNode}
@@ -251,6 +267,8 @@ const Index = () => {
           onChangeEdgeColor={editor.changeEdgeColor}
           onStartConnect={handleStartConnect}
           onAddCategory={handleAddCategory}
+          onEditCategory={editor.openEditCategory}
+          onDeleteCategory={handleDeleteCategory}
         >
           <FlowChartCanvas
             data={editor.flowData}
