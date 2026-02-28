@@ -66,6 +66,17 @@ const COLOR_RGB: Record<string, [number, number, number]> = {
   lime: [60, 255, 60],
 };
 
+interface AmbientStar {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  opacity: number;
+  twinkleSpeed: number;
+  twinkleOffset: number;
+}
+
 interface Particle {
   t: number;
   speed: number;
@@ -168,6 +179,7 @@ export default function FlowChartCanvas({
 }: FlowChartCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<Particle[]>([]);
+  const ambientStarsRef = useRef<AmbientStar[]>([]);
   const animRef = useRef<number>(0);
   const nodeMapRef = useRef<Map<string, FlowNode>>(new Map());
   const animatedValuesRef = useRef<Map<string, number>>(new Map());
@@ -193,6 +205,24 @@ export default function FlowChartCanvas({
       }
     });
     particlesRef.current = particles;
+
+    // Initialize ambient stars
+    if (ambientStarsRef.current.length === 0) {
+      const stars: AmbientStar[] = [];
+      for (let i = 0; i < 60; i++) {
+        stars.push({
+          x: Math.random() * 2000,
+          y: Math.random() * 1200,
+          vx: (Math.random() - 0.5) * 0.15,
+          vy: (Math.random() - 0.5) * 0.1,
+          size: 0.5 + Math.random() * 1.5,
+          opacity: 0.1 + Math.random() * 0.3,
+          twinkleSpeed: 0.5 + Math.random() * 2,
+          twinkleOffset: Math.random() * Math.PI * 2,
+        });
+      }
+      ambientStarsRef.current = stars;
+    }
   }, [data]);
 
   const draw = useCallback(() => {
@@ -229,6 +259,48 @@ export default function FlowChartCanvas({
         ctx.fill();
       }
     }
+
+    // === FLOATING AMBIENT STARS ===
+    ambientStarsRef.current.forEach((star) => {
+      star.x += star.vx;
+      star.y += star.vy;
+      if (star.x < 0) star.x = width;
+      if (star.x > width) star.x = 0;
+      if (star.y < 0) star.y = height;
+      if (star.y > height) star.y = 0;
+
+      const twinkle = 0.5 + 0.5 * Math.sin(time * star.twinkleSpeed + star.twinkleOffset);
+      const alpha = star.opacity * twinkle;
+
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(210, 40%, 80%, ${alpha})`;
+      ctx.fill();
+
+      if (star.size > 1) {
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.size * 3, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(210, 40%, 80%, ${alpha * 0.08})`;
+        ctx.fill();
+      }
+    });
+
+    // === AMBIENT LIGHT BLEEDING from nodes ===
+    data.nodes.forEach((node) => {
+      if (node.type !== "metric" && node.type !== "process") return;
+      const color = node.color || "cyan";
+      const rgb = COLOR_RGB[color] || COLOR_RGB.cyan;
+      const size = node.size || 60;
+      const bleedRadius = size * 3;
+      const bleedGrad = ctx.createRadialGradient(node.x, node.y, size * 0.3, node.x, node.y, bleedRadius);
+      bleedGrad.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.04)`);
+      bleedGrad.addColorStop(0.5, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.015)`);
+      bleedGrad.addColorStop(1, "transparent");
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, bleedRadius, 0, Math.PI * 2);
+      ctx.fillStyle = bleedGrad;
+      ctx.fill();
+    });
 
     const nodeMap = nodeMapRef.current;
     const edgeMap = new Map<string, FlowEdge>();
@@ -715,6 +787,22 @@ export default function FlowChartCanvas({
     ctx.textAlign = "end";
     ctx.fillText("Del · Ctrl+Z · Ctrl+A · ↑↓←→", width - 14, height - 12);
     ctx.textAlign = "start";
+
+    // === VIGNETTE EFFECT ===
+    const vignetteGrad = ctx.createRadialGradient(
+      width / 2, height / 2, Math.min(width, height) * 0.35,
+      width / 2, height / 2, Math.max(width, height) * 0.75
+    );
+    vignetteGrad.addColorStop(0, "transparent");
+    vignetteGrad.addColorStop(1, "hsla(222, 47%, 2%, 0.5)");
+    ctx.fillStyle = vignetteGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    // === CRT SCANLINES ===
+    ctx.fillStyle = "hsla(0, 0%, 0%, 0.03)";
+    for (let sy = 0; sy < height; sy += 3) {
+      ctx.fillRect(0, sy, width, 1);
+    }
 
     animRef.current = requestAnimationFrame(draw);
   }, [data, width, height, selectedNodeId, selectedNodeIds, selectedEdgeId, selectedCategoryId, connectingFrom, hoveredNodeId, getNodeAnimations]);
