@@ -5,6 +5,7 @@ import FlowNodeEditor from "@/components/FlowNodeEditor";
 import FlowCategoryEditor from "@/components/FlowCategoryEditor";
 import FlowContextMenu from "@/components/FlowContextMenu";
 import FlowTooltip from "@/components/FlowTooltip";
+import FlowStatusBar from "@/components/FlowStatusBar";
 import DataManager from "@/components/DataManager";
 import { mockFlowData } from "@/data/mockFlowData";
 import { FlowNode, FlowEdge, FlowData } from "@/types/flow";
@@ -295,6 +296,11 @@ const Index = () => {
             onClose={editor.closeEditCategory}
           />
         )}
+
+        <FlowStatusBar
+          data={editor.flowData}
+          selectedCount={editor.state.selectedNodeIds.length}
+        />
       </main>
     </div>
   );
