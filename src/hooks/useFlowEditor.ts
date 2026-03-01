@@ -473,6 +473,15 @@ export function useFlowEditor(initialData: FlowData) {
     [pushUndo]
   );
 
+  const updateNodeValue = useCallback((nodeId: string, value: string | number) => {
+    setFlowData((prev) => ({
+      ...prev,
+      nodes: prev.nodes.map((n) =>
+        n.id === nodeId ? { ...n, value } : n
+      ),
+    }));
+  }, []);
+
   const loadFlowData = useCallback((newData: FlowData) => {
     setFlowData(newData);
     setState({
@@ -524,6 +533,7 @@ export function useFlowEditor(initialData: FlowData) {
     endConnect,
     cancelConnect,
     loadFlowData,
+    updateNodeValue,
     undo,
     redo,
     getNodeAnimations,
