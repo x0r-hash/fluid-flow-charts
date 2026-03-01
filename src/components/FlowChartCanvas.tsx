@@ -77,6 +77,16 @@ interface AmbientStar {
   twinkleOffset: number;
 }
 
+interface PulseWave {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  opacity: number;
+  color: string;
+  rgb: [number, number, number];
+}
+
 interface Particle {
   t: number;
   speed: number;
@@ -184,6 +194,7 @@ export default function FlowChartCanvas({
   const nodeMapRef = useRef<Map<string, FlowNode>>(new Map());
   const animatedValuesRef = useRef<Map<string, number>>(new Map());
   const timeRef = useRef<number>(0);
+  const pulseWavesRef = useRef<PulseWave[]>([]);
 
   useEffect(() => {
     const map = new Map<string, FlowNode>();
@@ -392,10 +403,46 @@ export default function FlowChartCanvas({
     });
 
     // === PARTICLES with trails ===
-    particlesRef.current.forEach((p) => {
-      p.t += p.speed;
-      if (p.t > 1) p.t -= 1;
+    // Update pulse waves
+    pulseWavesRef.current = pulseWavesRef.current.filter((pw) => {
+      pw.radius += 2.5;
+      pw.opacity -= 0.015;
+      return pw.opacity > 0 && pw.radius < pw.maxRadius;
+    });
 
+    // Draw pulse waves
+    pulseWavesRef.current.forEach((pw) => {
+      ctx.beginPath();
+      ctx.arc(pw.x, pw.y, pw.radius, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(${pw.rgb[0]}, ${pw.rgb[1]}, ${pw.rgb[2]}, ${pw.opacity})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+
+    particlesRef.current.forEach((p) => {
+      const prevT = p.t;
+      p.t += p.speed;
+      if (p.t > 1) {
+        p.t -= 1;
+        // Spawn pulse wave at destination
+        const edge = edgeMap.get(p.edgeId);
+        if (edge) {
+          const toNode = nodeMap.get(edge.to);
+          if (toNode) {
+            const color = edge.color || "cyan";
+            const rgb = COLOR_RGB[color] || COLOR_RGB.cyan;
+            pulseWavesRef.current.push({
+              x: toNode.x,
+              y: toNode.y,
+              radius: toNode.type === "metric" || toNode.type === "process" ? (toNode.size || 60) : 12,
+              maxRadius: 120,
+              opacity: 0.35,
+              color,
+              rgb,
+            });
+          }
+        }
+      }
       const edge = edgeMap.get(p.edgeId);
       if (!edge) return;
       const fromNode = nodeMap.get(edge.from);
@@ -552,9 +599,16 @@ export default function FlowChartCanvas({
 
       } else if (node.type === "metric" || node.type === "process") {
         // === GLASSMORPHIC METRIC/PROCESS NODES ===
-        const size = node.size || 60;
+        const baseSize = node.size || 60;
         const shape = node.shape || "circle";
         const animSpeed = node.animationSpeed || 1;
+
+        // Dynamic breathing — speed scales with node value
+        const breathVal = typeof node.value === "number" ? node.value : 50;
+        const breathSpeed = 1 + Math.min(breathVal / 200, 3); // higher value = faster
+        const breathAmount = 3 + Math.min(breathVal / 100, 5);  // higher value = bigger pulse
+        const breathScale = Math.sin(time * breathSpeed) * breathAmount;
+        const size = baseSize + breathScale;
 
         // Animated value
         if (node.animateValue) {
