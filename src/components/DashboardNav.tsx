@@ -4,16 +4,22 @@ interface NavItem {
   label: string;
   icon: React.ReactNode;
   active?: boolean;
+  onClick?: () => void;
 }
 
-const navItems: NavItem[] = [
-  { label: "Dashboard", icon: <Activity className="w-4 h-4" />, active: true },
-  { label: "Pipelines", icon: <GitBranch className="w-4 h-4" /> },
-  { label: "Repositories", icon: <Database className="w-4 h-4" /> },
-  { label: "Settings", icon: <Settings className="w-4 h-4" /> },
-];
+interface DashboardNavProps {
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
+}
 
-export default function DashboardNav() {
+export default function DashboardNav({ activeTab = "Dashboard", onTabChange }: DashboardNavProps) {
+  const navItems: NavItem[] = [
+    { label: "Dashboard", icon: <Activity className="w-4 h-4" />, active: activeTab === "Dashboard" },
+    { label: "Pipelines", icon: <GitBranch className="w-4 h-4" />, active: activeTab === "Pipelines" },
+    { label: "Repositories", icon: <Database className="w-4 h-4" />, active: activeTab === "Repositories" },
+    { label: "Settings", icon: <Settings className="w-4 h-4" />, active: activeTab === "Settings" },
+  ];
+
   return (
     <header className="flex items-center justify-between px-6 py-3 border-b border-border bg-card">
       <div className="flex items-center gap-8">
@@ -29,6 +35,7 @@ export default function DashboardNav() {
           {navItems.map((item) => (
             <button
               key={item.label}
+              onClick={() => onTabChange?.(item.label)}
               className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 item.active
                   ? "bg-muted text-primary text-glow-cyan"

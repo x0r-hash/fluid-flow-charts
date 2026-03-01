@@ -7,17 +7,30 @@ import FlowContextMenu from "@/components/FlowContextMenu";
 import FlowTooltip from "@/components/FlowTooltip";
 import FlowStatusBar from "@/components/FlowStatusBar";
 import DataManager from "@/components/DataManager";
+import PipelineManager from "@/components/PipelineManager";
 import { mockFlowData } from "@/data/mockFlowData";
 import { FlowNode, FlowEdge, FlowData, FlowCategory } from "@/types/flow";
 import { useFlowEditor } from "@/hooks/useFlowEditor";
+import { usePipelineEngine } from "@/hooks/usePipelineEngine";
 import { toast } from "sonner";
 
 const Index = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 1200, height: 660 });
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [activeTab, setActiveTab] = useState("Dashboard");
 
   const editor = useFlowEditor(mockFlowData);
+
+  const handleUpdateNodeValue = useCallback((nodeId: string, value: string | number) => {
+    editor.updateNodeValue(nodeId, value);
+  }, [editor]);
+
+  const pipelineEngine = usePipelineEngine(editor.flowData, handleUpdateNodeValue);
+
+  const metricNodes = editor.flowData.nodes.filter(
+    (n) => n.type === "metric" || n.type === "process"
+  );
 
   const handleDataChange = useCallback((newData: FlowData) => {
     editor.loadFlowData(newData);
@@ -246,80 +259,96 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex justify-between items-center">
-        <DashboardNav />
-        <DataManager
-          data={editor.flowData}
-          onDataChange={handleDataChange}
-          onReset={handleReset}
-        />
-      </div>
-      <main ref={containerRef} className="flex-1 overflow-hidden p-2 relative">
-        <FlowContextMenu
-          targetNode={contextTarget.node}
-          targetEdge={contextTarget.edge}
-          targetCategory={contextTarget.category}
-          contextPos={contextTarget.pos}
-          onEditNode={editor.openEditNode}
-          onDeleteNode={handleDeleteNode}
-          onChangeNodeColor={editor.changeNodeColor}
-          onAddNode={handleAddNode}
-          onDeleteEdge={handleDeleteEdge}
-          onChangeEdgeColor={editor.changeEdgeColor}
-          onStartConnect={handleStartConnect}
-          onAddCategory={handleAddCategory}
-          onEditCategory={editor.openEditCategory}
-          onDeleteCategory={handleDeleteCategory}
-        >
-          <FlowChartCanvas
+        <DashboardNav activeTab={activeTab} onTabChange={setActiveTab} />
+        {activeTab === "Dashboard" && (
+          <DataManager
             data={editor.flowData}
-            width={dimensions.width}
-            height={dimensions.height}
-            selectedNodeId={editor.state.selectedNodeId}
-            selectedNodeIds={editor.state.selectedNodeIds}
-            selectedEdgeId={editor.state.selectedEdgeId}
-            selectedCategoryId={editor.state.selectedCategoryId}
-            connectingFrom={editor.state.connectingFrom}
-            hoveredNodeId={editor.state.hoveredNodeId}
-            getNodeAnimations={editor.getNodeAnimations}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onDoubleClick={handleDoubleClick}
-            onContextMenu={handleContextMenu}
-          />
-        </FlowContextMenu>
-
-        {/* Hover tooltip */}
-        {hoveredNode && !editor.state.isDragging && (
-          <FlowTooltip
-            node={hoveredNode}
-            mouseX={mousePos.x}
-            mouseY={mousePos.y}
-            flowData={editor.flowData}
+            onDataChange={handleDataChange}
+            onReset={handleReset}
           />
         )}
-
-        {editor.state.editingNode && (
-          <FlowNodeEditor
-            node={editor.state.editingNode}
-            onSave={editor.saveEditNode}
-            onClose={editor.closeEditNode}
+      </div>
+      {activeTab === "Pipelines" ? (
+        <main className="flex-1 overflow-hidden">
+          <PipelineManager
+            pipelines={pipelineEngine.pipelines}
+            history={pipelineEngine.history}
+            metricNodes={metricNodes}
+            onStart={pipelineEngine.startPipeline}
+            onPause={pipelineEngine.pausePipeline}
+            onRemove={pipelineEngine.removePipeline}
+            onAdd={pipelineEngine.addPipeline}
+            onUpdate={pipelineEngine.updatePipeline}
           />
-        )}
+        </main>
+      ) : (
+        <main ref={containerRef} className="flex-1 overflow-hidden p-2 relative">
+          <FlowContextMenu
+            targetNode={contextTarget.node}
+            targetEdge={contextTarget.edge}
+            targetCategory={contextTarget.category}
+            contextPos={contextTarget.pos}
+            onEditNode={editor.openEditNode}
+            onDeleteNode={handleDeleteNode}
+            onChangeNodeColor={editor.changeNodeColor}
+            onAddNode={handleAddNode}
+            onDeleteEdge={handleDeleteEdge}
+            onChangeEdgeColor={editor.changeEdgeColor}
+            onStartConnect={handleStartConnect}
+            onAddCategory={handleAddCategory}
+            onEditCategory={editor.openEditCategory}
+            onDeleteCategory={handleDeleteCategory}
+          >
+            <FlowChartCanvas
+              data={editor.flowData}
+              width={dimensions.width}
+              height={dimensions.height}
+              selectedNodeId={editor.state.selectedNodeId}
+              selectedNodeIds={editor.state.selectedNodeIds}
+              selectedEdgeId={editor.state.selectedEdgeId}
+              selectedCategoryId={editor.state.selectedCategoryId}
+              connectingFrom={editor.state.connectingFrom}
+              hoveredNodeId={editor.state.hoveredNodeId}
+              getNodeAnimations={editor.getNodeAnimations}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onDoubleClick={handleDoubleClick}
+              onContextMenu={handleContextMenu}
+            />
+          </FlowContextMenu>
 
-        {editor.state.editingCategory && (
-          <FlowCategoryEditor
-            category={editor.state.editingCategory}
-            onSave={editor.saveEditCategory}
-            onClose={editor.closeEditCategory}
+          {hoveredNode && !editor.state.isDragging && (
+            <FlowTooltip
+              node={hoveredNode}
+              mouseX={mousePos.x}
+              mouseY={mousePos.y}
+              flowData={editor.flowData}
+            />
+          )}
+
+          {editor.state.editingNode && (
+            <FlowNodeEditor
+              node={editor.state.editingNode}
+              onSave={editor.saveEditNode}
+              onClose={editor.closeEditNode}
+            />
+          )}
+
+          {editor.state.editingCategory && (
+            <FlowCategoryEditor
+              category={editor.state.editingCategory}
+              onSave={editor.saveEditCategory}
+              onClose={editor.closeEditCategory}
+            />
+          )}
+
+          <FlowStatusBar
+            data={editor.flowData}
+            selectedCount={editor.state.selectedNodeIds.length}
           />
-        )}
-
-        <FlowStatusBar
-          data={editor.flowData}
-          selectedCount={editor.state.selectedNodeIds.length}
-        />
-      </main>
+        </main>
+      )}
     </div>
   );
 };
