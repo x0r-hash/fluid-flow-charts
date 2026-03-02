@@ -51,28 +51,6 @@ export default function DashboardNav({ activeTab = "Dashboard", onTabChange }: D
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent/30 to-primary/20 flex items-center justify-center text-xs font-bold text-primary border border-border/50 ring-1 ring-accent/20 cursor-pointer transition-smooth hover:ring-accent/40 hover:shadow-soft">
           AD
         </div>
-<<<<<<< HEAD
-=======
-        <nav className="flex items-center gap-1">
-          {navItems.map((item) => (
-            <button
-              key={item.label}
-              onClick={() => onTabChange?.(item.label)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                item.active
-                  ? "bg-muted text-primary text-glow-cyan"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              }`}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-      <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-semibold text-muted-foreground border border-border">
-        AD
->>>>>>> 80de26fd38b6dc403b44e0ec40e5d3f56f3f0864
       </div>
     </header>
   );
