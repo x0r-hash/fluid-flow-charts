@@ -77,6 +77,16 @@ interface AmbientStar {
   twinkleOffset: number;
 }
 
+interface PulseWave {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  opacity: number;
+  color: string;
+  rgb: [number, number, number];
+}
+
 interface Particle {
   t: number;
   speed: number;
@@ -184,6 +194,19 @@ export default function FlowChartCanvas({
   const nodeMapRef = useRef<Map<string, FlowNode>>(new Map());
   const animatedValuesRef = useRef<Map<string, number>>(new Map());
   const timeRef = useRef<number>(0);
+  const lastFrameTimeRef = useRef<number>(0);
+  const pulseWavesRef = useRef<PulseWave[]>([]);
+  const canvasSizeRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
+
+  // Store all render props in refs so draw callback is stable
+  const propsRef = useRef({
+    data, width, height, selectedNodeId, selectedNodeIds, selectedEdgeId,
+    selectedCategoryId, connectingFrom, hoveredNodeId, getNodeAnimations,
+  });
+  propsRef.current = {
+    data, width, height, selectedNodeId, selectedNodeIds, selectedEdgeId,
+    selectedCategoryId, connectingFrom, hoveredNodeId, getNodeAnimations,
+  };
 
   useEffect(() => {
     const map = new Map<string, FlowNode>();
@@ -225,18 +248,30 @@ export default function FlowChartCanvas({
     }
   }, [data]);
 
-  const draw = useCallback(() => {
+  const draw = useCallback((timestamp?: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    ctx.scale(dpr, dpr);
+    const { data, width, height, selectedNodeId, selectedNodeIds, selectedEdgeId,
+      selectedCategoryId, connectingFrom, hoveredNodeId, getNodeAnimations } = propsRef.current;
 
-    timeRef.current += 0.016;
+    // Delta time for smooth animation
+    const frameNow = timestamp || performance.now();
+    const dt = lastFrameTimeRef.current ? Math.min((frameNow - lastFrameTimeRef.current) / 1000, 0.05) : 0.016;
+    lastFrameTimeRef.current = frameNow;
+    const dpr = window.devicePixelRatio || 1;
+    const targetW = width * dpr;
+    const targetH = height * dpr;
+    if (canvasSizeRef.current.w !== targetW || canvasSizeRef.current.h !== targetH) {
+      canvas.width = targetW;
+      canvas.height = targetH;
+      canvasSizeRef.current = { w: targetW, h: targetH };
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    timeRef.current += dt;
     const time = timeRef.current;
 
     // === BACKGROUND ===
@@ -262,8 +297,8 @@ export default function FlowChartCanvas({
 
     // === FLOATING AMBIENT STARS ===
     ambientStarsRef.current.forEach((star) => {
-      star.x += star.vx;
-      star.y += star.vy;
+      star.x += star.vx * (dt / 0.016);
+      star.y += star.vy * (dt / 0.016);
       if (star.x < 0) star.x = width;
       if (star.x > width) star.x = 0;
       if (star.y < 0) star.y = height;
@@ -392,10 +427,45 @@ export default function FlowChartCanvas({
     });
 
     // === PARTICLES with trails ===
-    particlesRef.current.forEach((p) => {
-      p.t += p.speed;
-      if (p.t > 1) p.t -= 1;
+    // Update pulse waves
+    pulseWavesRef.current = pulseWavesRef.current.filter((pw) => {
+      pw.radius += 2.5 * (dt / 0.016);
+      pw.opacity -= 0.015 * (dt / 0.016);
+      return pw.opacity > 0 && pw.radius < pw.maxRadius;
+    });
 
+    // Draw pulse waves
+    pulseWavesRef.current.forEach((pw) => {
+      ctx.beginPath();
+      ctx.arc(pw.x, pw.y, pw.radius, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(${pw.rgb[0]}, ${pw.rgb[1]}, ${pw.rgb[2]}, ${pw.opacity})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+
+    particlesRef.current.forEach((p) => {
+      p.t += p.speed * (dt / 0.016);
+      if (p.t > 1) {
+        p.t -= 1;
+        // Spawn pulse wave at destination
+        const edge = edgeMap.get(p.edgeId);
+        if (edge) {
+          const toNode = nodeMap.get(edge.to);
+          if (toNode) {
+            const color = edge.color || "cyan";
+            const rgb = COLOR_RGB[color] || COLOR_RGB.cyan;
+            pulseWavesRef.current.push({
+              x: toNode.x,
+              y: toNode.y,
+              radius: toNode.type === "metric" || toNode.type === "process" ? (toNode.size || 60) : 12,
+              maxRadius: 120,
+              opacity: 0.35,
+              color,
+              rgb,
+            });
+          }
+        }
+      }
       const edge = edgeMap.get(p.edgeId);
       if (!edge) return;
       const fromNode = nodeMap.get(edge.from);
@@ -407,28 +477,55 @@ export default function FlowChartCanvas({
       const color = edge.color || "cyan";
       const rgb = COLOR_RGB[color] || COLOR_RGB.cyan;
 
-      // Trail
-      const trailSteps = 4;
+      // Long comet trail with fading gradient
+      const trailSteps = 14;
+      const trailSpacing = 0.008;
       for (let i = trailSteps; i >= 0; i--) {
-        const tt = p.t - i * 0.012;
+        const tt = p.t - i * trailSpacing;
         if (tt < 0) continue;
         const pos = getPointOnCurve(from, to, tt);
-        const trailOpacity = p.opacity * (1 - i / trailSteps) * 0.5;
-        const trailSize = p.size * (1 - i / trailSteps * 0.5);
+        const fade = 1 - i / trailSteps;
+        const trailOpacity = p.opacity * fade * fade * 0.6;
+        const trailSize = p.size * (0.2 + fade * 0.8);
+
+        // Outer glow for trail segments near the head
+        if (i < 4) {
+          const glowSize = trailSize * (3.5 - i * 0.6);
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, glowSize, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${trailOpacity * 0.12})`;
+          ctx.fill();
+        }
+
         ctx.beginPath();
         ctx.arc(pos.x, pos.y, trailSize, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${trailOpacity})`;
         ctx.fill();
       }
 
-      // Main particle with glow
+      // Main particle head with intense glow
       const pos = getPointOnCurve(from, to, p.t);
       ctx.save();
-      ctx.shadowColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.8)`;
-      ctx.shadowBlur = 6;
+      // Outer halo
+      const haloGrad = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, p.size * 6);
+      haloGrad.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.25)`);
+      haloGrad.addColorStop(0.4, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.06)`);
+      haloGrad.addColorStop(1, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0)`);
       ctx.beginPath();
-      ctx.arc(pos.x, pos.y, p.size, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${p.opacity})`;
+      ctx.arc(pos.x, pos.y, p.size * 6, 0, Math.PI * 2);
+      ctx.fillStyle = haloGrad;
+      ctx.fill();
+      // Bright core
+      ctx.shadowColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 1)`;
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, p.size * 1.1, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${Math.min(rgb[0] + 80, 255)}, ${Math.min(rgb[1] + 80, 255)}, ${Math.min(rgb[2] + 80, 255)}, ${p.opacity})`;
+      ctx.fill();
+      // White-hot center
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, p.size * 0.4, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity * 0.7})`;
       ctx.fill();
       ctx.restore();
     });
@@ -552,9 +649,16 @@ export default function FlowChartCanvas({
 
       } else if (node.type === "metric" || node.type === "process") {
         // === GLASSMORPHIC METRIC/PROCESS NODES ===
-        const size = node.size || 60;
+        const baseSize = node.size || 60;
         const shape = node.shape || "circle";
         const animSpeed = node.animationSpeed || 1;
+
+        // Dynamic breathing — speed scales with node value
+        const breathVal = typeof node.value === "number" ? node.value : 50;
+        const breathSpeed = 1 + Math.min(breathVal / 200, 3); // higher value = faster
+        const breathAmount = 3 + Math.min(breathVal / 100, 5);  // higher value = bigger pulse
+        const breathScale = Math.sin(time * breathSpeed) * breathAmount;
+        const size = baseSize + breathScale;
 
         // Animated value
         if (node.animateValue) {
@@ -805,9 +909,10 @@ export default function FlowChartCanvas({
     }
 
     animRef.current = requestAnimationFrame(draw);
-  }, [data, width, height, selectedNodeId, selectedNodeIds, selectedEdgeId, selectedCategoryId, connectingFrom, hoveredNodeId, getNodeAnimations]);
+  }, []);
 
   useEffect(() => {
+    lastFrameTimeRef.current = 0;
     animRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animRef.current);
   }, [draw]);
