@@ -15,7 +15,9 @@ export interface FlowEditorState {
   selectedNodeIds: string[]; // multi-select
   selectedEdgeId: string | null;
   selectedCategoryId: string | null;
+  selectedCategoryIds: string[]; // multi-select categories
   isDragging: boolean;
+  isDraggingCategories: boolean; // Track if dragging categories vs nodes
   connectingFrom: string | null;
   editingNode: FlowNode | null;
   editingCategory: FlowCategory | null;
@@ -29,7 +31,9 @@ export function useFlowEditor(initialData: FlowData) {
     selectedNodeIds: [],
     selectedEdgeId: null,
     selectedCategoryId: null,
+    selectedCategoryIds: [],
     isDragging: false,
+    isDraggingCategories: false,
     connectingFrom: null,
     editingNode: null,
     editingCategory: null,
@@ -171,6 +175,7 @@ export function useFlowEditor(initialData: FlowData) {
           isDragging: true,
           selectedEdgeId: null,
           selectedCategoryId: null,
+          selectedCategoryIds: [],
         };
       });
     },
@@ -210,27 +215,49 @@ export function useFlowEditor(initialData: FlowData) {
 
   // Category drag
   const startCategoryDrag = useCallback(
-    (categoryId: string, mouseX: number, mouseY: number) => {
+    (categoryId: string, mouseX: number, mouseY: number, shiftKey: boolean = false) => {
       const category = flowData.categories?.find((c) => c.id === categoryId);
       if (!category) return;
-      dragOffsetRef.current = { dx: mouseX - category.x, dy: mouseY - category.y };
-      setState((s) => ({ ...s, selectedCategoryId: categoryId, isDragging: true }));
+      
+      setState((s) => {
+        let newSelectedIds: string[];
+        if (shiftKey) {
+          newSelectedIds = s.selectedCategoryIds.includes(categoryId)
+            ? s.selectedCategoryIds.filter((id) => id !== categoryId)
+            : [...s.selectedCategoryIds, categoryId];
+        } else {
+          newSelectedIds = [categoryId];
+        }
+        
+        // Set up drag offsets for all selected categories
+        const offsets: Map<string, { dx: number; dy: number }> = new Map();
+        flowData.categories?.forEach((c) => {
+          if (newSelectedIds.includes(c.id)) {
+            offsets.set(c.id, { dx: mouseX - c.x, dy: mouseY - c.y });
+          }
+        });
+        multiDragOffsetsRef.current = offsets;
+        
+        return { ...s, selectedCategoryId: categoryId, selectedCategoryIds: newSelectedIds, isDragging: true, selectedNodeId: null, selectedNodeIds: [], selectedEdgeId: null };
+      });
     },
     [flowData.categories]
   );
 
   const dragCategory = useCallback(
     (mouseX: number, mouseY: number) => {
-      if (!state.isDragging || !state.selectedCategoryId) return;
-      const { dx, dy } = dragOffsetRef.current;
+      if (!state.isDragging || state.selectedCategoryIds.length === 0) return;
+      
       setFlowData((prev) => ({
         ...prev,
-        categories: prev.categories?.map((c) =>
-          c.id === state.selectedCategoryId ? { ...c, x: mouseX - dx, y: mouseY - dy } : c
-        ),
+        categories: prev.categories?.map((c) => {
+          const offset = multiDragOffsetsRef.current.get(c.id);
+          if (offset) return { ...c, x: mouseX - offset.dx, y: mouseY - offset.dy };
+          return c;
+        }),
       }));
     },
-    [state.isDragging, state.selectedCategoryId]
+    [state.isDragging, state.selectedCategoryIds]
   );
 
   // Select
@@ -240,9 +267,9 @@ export function useFlowEditor(initialData: FlowData) {
         const newIds = s.selectedNodeIds.includes(nodeId)
           ? s.selectedNodeIds.filter((id) => id !== nodeId)
           : [...s.selectedNodeIds, nodeId];
-        return { ...s, selectedNodeId: nodeId, selectedNodeIds: newIds, selectedEdgeId: null, selectedCategoryId: null };
+        return { ...s, selectedNodeId: nodeId, selectedNodeIds: newIds, selectedEdgeId: null, selectedCategoryId: null, selectedCategoryIds: [] };
       }
-      return { ...s, selectedNodeId: nodeId, selectedNodeIds: nodeId ? [nodeId] : [], selectedEdgeId: null, selectedCategoryId: null };
+      return { ...s, selectedNodeId: nodeId, selectedNodeIds: nodeId ? [nodeId] : [], selectedEdgeId: null, selectedCategoryId: null, selectedCategoryIds: [] };
     });
   }, []);
 
@@ -255,11 +282,19 @@ export function useFlowEditor(initialData: FlowData) {
   }, [flowData.nodes]);
 
   const selectEdge = useCallback((edgeId: string | null) => {
-    setState((s) => ({ ...s, selectedEdgeId: edgeId, selectedNodeId: null, selectedNodeIds: [], selectedCategoryId: null }));
+    setState((s) => ({ ...s, selectedEdgeId: edgeId, selectedNodeId: null, selectedNodeIds: [], selectedCategoryId: null, selectedCategoryIds: [] }));
   }, []);
 
-  const selectCategory = useCallback((categoryId: string | null) => {
-    setState((s) => ({ ...s, selectedCategoryId: categoryId, selectedNodeId: null, selectedNodeIds: [], selectedEdgeId: null }));
+  const selectCategory = useCallback((categoryId: string | null, shiftKey: boolean = false) => {
+    setState((s) => {
+      if (shiftKey && categoryId) {
+        const newIds = s.selectedCategoryIds.includes(categoryId)
+          ? s.selectedCategoryIds.filter((id) => id !== categoryId)
+          : [...s.selectedCategoryIds, categoryId];
+        return { ...s, selectedCategoryId: categoryId, selectedCategoryIds: newIds, selectedNodeId: null, selectedNodeIds: [], selectedEdgeId: null };
+      }
+      return { ...s, selectedCategoryId: categoryId, selectedCategoryIds: categoryId ? [categoryId] : [], selectedNodeId: null, selectedNodeIds: [], selectedEdgeId: null };
+    });
   }, []);
 
   // Edit node
@@ -489,7 +524,9 @@ export function useFlowEditor(initialData: FlowData) {
       selectedNodeIds: [],
       selectedEdgeId: null,
       selectedCategoryId: null,
+      selectedCategoryIds: [],
       isDragging: false,
+      isDraggingCategories: false,
       connectingFrom: null,
       editingNode: null,
       editingCategory: null,

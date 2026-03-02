@@ -88,11 +88,13 @@ interface PulseWave {
 }
 
 interface Particle {
+  id: string; // Unique identifier for each particle
   t: number;
   speed: number;
   edgeId: string;
   size: number;
   opacity: number;
+  createdAt: number; // Animation time when this particle was created
 }
 
 interface NodeAnimation {
@@ -110,6 +112,7 @@ export interface FlowChartCanvasProps {
   selectedNodeIds?: string[];
   selectedEdgeId?: string | null;
   selectedCategoryId?: string | null;
+  selectedCategoryIds?: string[];
   connectingFrom?: string | null;
   hoveredNodeId?: string | null;
   getNodeAnimations?: () => NodeAnimation[];
@@ -178,6 +181,7 @@ export default function FlowChartCanvas({
   selectedNodeIds = [],
   selectedEdgeId,
   selectedCategoryId,
+  selectedCategoryIds = [],
   connectingFrom,
   hoveredNodeId,
   getNodeAnimations,
@@ -197,15 +201,16 @@ export default function FlowChartCanvas({
   const lastFrameTimeRef = useRef<number>(0);
   const pulseWavesRef = useRef<PulseWave[]>([]);
   const canvasSizeRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
+  const particleIdCounterRef = useRef<number>(0); // Unique ID generator for particles
 
   // Store all render props in refs so draw callback is stable
   const propsRef = useRef({
     data, width, height, selectedNodeId, selectedNodeIds, selectedEdgeId,
-    selectedCategoryId, connectingFrom, hoveredNodeId, getNodeAnimations,
+    selectedCategoryId, selectedCategoryIds, connectingFrom, hoveredNodeId, getNodeAnimations,
   });
   propsRef.current = {
     data, width, height, selectedNodeId, selectedNodeIds, selectedEdgeId,
-    selectedCategoryId, connectingFrom, hoveredNodeId, getNodeAnimations,
+    selectedCategoryId, selectedCategoryIds, connectingFrom, hoveredNodeId, getNodeAnimations,
   };
 
   useEffect(() => {
@@ -214,16 +219,21 @@ export default function FlowChartCanvas({
     nodeMapRef.current = map;
 
     const particles: Particle[] = [];
+    
     data.edges.forEach((edge) => {
       const count = edge.particleCount || 4;
-      const speed = (edge.speed || 1) * 0.003;
+      const speed = (edge.speed || 1) * 0.015;
+      // Distribute particles evenly across the journey (0 to 1)
       for (let i = 0; i < count; i++) {
+        const particleSpeed = speed * (0.8 + Math.random() * 0.4);
         particles.push({
-          t: Math.random(),
-          speed: speed * (0.8 + Math.random() * 0.4),
+          id: `particle-${particleIdCounterRef.current++}`, // Unique ID
+          t: (i / count) * 0.9, // Stagger: particle 0 at 0%, particle 1 at 23%, etc.
+          speed: particleSpeed,
           edgeId: edge.id,
           size: 1.5 + Math.random() * 2,
           opacity: 0.5 + Math.random() * 0.5,
+          createdAt: 0, // Created at animation start
         });
       }
     });
@@ -255,7 +265,7 @@ export default function FlowChartCanvas({
     if (!ctx) return;
 
     const { data, width, height, selectedNodeId, selectedNodeIds, selectedEdgeId,
-      selectedCategoryId, connectingFrom, hoveredNodeId, getNodeAnimations } = propsRef.current;
+      selectedCategoryId, selectedCategoryIds, connectingFrom, hoveredNodeId, getNodeAnimations } = propsRef.current;
 
     // Delta time for smooth animation
     const frameNow = timestamp || performance.now();
@@ -429,8 +439,8 @@ export default function FlowChartCanvas({
     // === PARTICLES with trails ===
     // Update pulse waves
     pulseWavesRef.current = pulseWavesRef.current.filter((pw) => {
-      pw.radius += 2.5 * (dt / 0.016);
-      pw.opacity -= 0.015 * (dt / 0.016);
+      pw.radius += 1.8 * (dt / 0.016); // Reduced expansion speed
+      pw.opacity -= 0.025 * (dt / 0.016); // Faster fade-out
       return pw.opacity > 0 && pw.radius < pw.maxRadius;
     });
 
@@ -443,11 +453,14 @@ export default function FlowChartCanvas({
       ctx.stroke();
     });
 
-    particlesRef.current.forEach((p) => {
+    // Update particles with independent lifetimes
+    const edgeParticleMap = new Map<string, Particle[]>();
+    
+    particlesRef.current = particlesRef.current.filter((p) => {
       p.t += p.speed * (dt / 0.016);
+      
+      // Remove particle only after it completes journey (independent of others)
       if (p.t > 1) {
-        p.t -= 1;
-        // Spawn pulse wave at destination
         const edge = edgeMap.get(p.edgeId);
         if (edge) {
           const toNode = nodeMap.get(edge.to);
@@ -458,14 +471,47 @@ export default function FlowChartCanvas({
               x: toNode.x,
               y: toNode.y,
               radius: toNode.type === "metric" || toNode.type === "process" ? (toNode.size || 60) : 12,
-              maxRadius: 120,
-              opacity: 0.35,
+              maxRadius: 80,
+              opacity: 0.15,
               color,
               rgb,
             });
           }
         }
+        return false; // Remove only this particle
       }
+      
+      // Track particles by edge for respawning
+      if (!edgeParticleMap.has(p.edgeId)) {
+        edgeParticleMap.set(p.edgeId, []);
+      }
+      edgeParticleMap.get(p.edgeId)!.push(p);
+      return true; // Keep particle
+    });
+    
+    // Respawn individual particles as they complete (not in groups)
+    data.edges.forEach((edge) => {
+      const currentParticles = edgeParticleMap.get(edge.id) || [];
+      const targetCount = edge.particleCount || 4;
+      const speed = (edge.speed || 1) * 0.015;
+      
+      // Only spawn one particle at a time to replace the one that just completed
+      if (currentParticles.length < targetCount) {
+        const particleSpeed = speed * (0.8 + Math.random() * 0.4);
+        particlesRef.current.push({
+          id: `particle-${particleIdCounterRef.current++}`, // Unique ID ensures independence
+          t: 0, // Start fresh at source
+          speed: particleSpeed,
+          edgeId: edge.id,
+          size: 1.5 + Math.random() * 2,
+          opacity: 0.5 + Math.random() * 0.5,
+          createdAt: time, // Track when this particle was created
+        });
+      }
+    });
+
+    particlesRef.current.forEach((p) => {
+      
       const edge = edgeMap.get(p.edgeId);
       if (!edge) return;
       const fromNode = nodeMap.get(edge.from);
@@ -533,7 +579,7 @@ export default function FlowChartCanvas({
     // === CATEGORIES ===
     data.categories?.forEach((cat) => {
       const color = COLOR_MAP[cat.color];
-      const isSelected = selectedCategoryId === cat.id;
+      const isSelected = selectedCategoryId === cat.id || (selectedCategoryIds && selectedCategoryIds.includes(cat.id));
       const rgb = COLOR_RGB[cat.color] || COLOR_RGB.cyan;
 
       ctx.font = "700 10px 'JetBrains Mono', monospace";

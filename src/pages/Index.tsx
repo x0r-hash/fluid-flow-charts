@@ -138,7 +138,7 @@ const Index = () => {
       if (node) {
         editor.startDrag(node.id, pos.x, pos.y, e.shiftKey);
       } else if (category) {
-        editor.startCategoryDrag(category.id, pos.x, pos.y);
+        editor.startCategoryDrag(category.id, pos.x, pos.y, e.shiftKey);
       } else {
         const edge = editor.findEdgeAt(pos.x, pos.y);
         if (edge) {
@@ -146,7 +146,7 @@ const Index = () => {
         } else {
           editor.selectNode(null);
           editor.selectEdge(null);
-          editor.selectCategory(null);
+          editor.selectCategory(null, false);
         }
       }
     },
@@ -163,9 +163,9 @@ const Index = () => {
       editor.setHoveredNode(node?.id || null);
 
       if (editor.state.isDragging) {
-        if (editor.state.selectedNodeId) {
+        if (editor.state.selectedNodeId || editor.state.selectedNodeIds.length > 0) {
           editor.drag(pos.x, pos.y);
-        } else if (editor.state.selectedCategoryId) {
+        } else if (editor.state.selectedCategoryId || editor.state.selectedCategoryIds.length > 0) {
           editor.dragCategory(pos.x, pos.y);
         }
       }
@@ -307,6 +307,7 @@ const Index = () => {
               selectedNodeIds={editor.state.selectedNodeIds}
               selectedEdgeId={editor.state.selectedEdgeId}
               selectedCategoryId={editor.state.selectedCategoryId}
+              selectedCategoryIds={editor.state.selectedCategoryIds}
               connectingFrom={editor.state.connectingFrom}
               hoveredNodeId={editor.state.hoveredNodeId}
               getNodeAnimations={editor.getNodeAnimations}
