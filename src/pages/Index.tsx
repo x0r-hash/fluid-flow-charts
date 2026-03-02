@@ -258,40 +258,10 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-<<<<<<< HEAD
-      <DashboardNav />
-      <div className="flex justify-between items-center px-6 py-3 border-b border-border/50">
-        <div></div>
-        <DataManager
-          data={editor.flowData}
-          onDataChange={handleDataChange}
-          onReset={handleReset}
-        />
-      </div>
-      <main ref={containerRef} className="flex-1 overflow-hidden p-4 relative bg-gradient-subtle">
-        <FlowContextMenu
-          targetNode={contextTarget.node}
-          targetEdge={contextTarget.edge}
-          targetCategory={contextTarget.category}
-          contextPos={contextTarget.pos}
-          onEditNode={editor.openEditNode}
-          onDeleteNode={handleDeleteNode}
-          onChangeNodeColor={editor.changeNodeColor}
-          onAddNode={handleAddNode}
-          onDeleteEdge={handleDeleteEdge}
-          onChangeEdgeColor={editor.changeEdgeColor}
-          onStartConnect={handleStartConnect}
-          onAddCategory={handleAddCategory}
-          onEditCategory={editor.openEditCategory}
-          onDeleteCategory={handleDeleteCategory}
-        >
-          <FlowChartCanvas
-=======
       <div className="flex justify-between items-center">
         <DashboardNav activeTab={activeTab} onTabChange={setActiveTab} />
         {activeTab === "Dashboard" && (
           <DataManager
->>>>>>> 80de26fd38b6dc403b44e0ec40e5d3f56f3f0864
             data={editor.flowData}
             onDataChange={handleDataChange}
             onReset={handleReset}
