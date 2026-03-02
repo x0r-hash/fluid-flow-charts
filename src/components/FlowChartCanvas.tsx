@@ -445,7 +445,6 @@ export default function FlowChartCanvas({
 
     particlesRef.current.forEach((p) => {
       p.t += p.speed * (dt / 0.016);
-      p.t += p.speed;
       if (p.t > 1) {
         p.t -= 1;
         // Spawn pulse wave at destination
@@ -478,28 +477,55 @@ export default function FlowChartCanvas({
       const color = edge.color || "cyan";
       const rgb = COLOR_RGB[color] || COLOR_RGB.cyan;
 
-      // Trail
-      const trailSteps = 4;
+      // Long comet trail with fading gradient
+      const trailSteps = 14;
+      const trailSpacing = 0.008;
       for (let i = trailSteps; i >= 0; i--) {
-        const tt = p.t - i * 0.012;
+        const tt = p.t - i * trailSpacing;
         if (tt < 0) continue;
         const pos = getPointOnCurve(from, to, tt);
-        const trailOpacity = p.opacity * (1 - i / trailSteps) * 0.5;
-        const trailSize = p.size * (1 - i / trailSteps * 0.5);
+        const fade = 1 - i / trailSteps;
+        const trailOpacity = p.opacity * fade * fade * 0.6;
+        const trailSize = p.size * (0.2 + fade * 0.8);
+
+        // Outer glow for trail segments near the head
+        if (i < 4) {
+          const glowSize = trailSize * (3.5 - i * 0.6);
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, glowSize, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${trailOpacity * 0.12})`;
+          ctx.fill();
+        }
+
         ctx.beginPath();
         ctx.arc(pos.x, pos.y, trailSize, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${trailOpacity})`;
         ctx.fill();
       }
 
-      // Main particle with glow
+      // Main particle head with intense glow
       const pos = getPointOnCurve(from, to, p.t);
       ctx.save();
-      ctx.shadowColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.8)`;
-      ctx.shadowBlur = 6;
+      // Outer halo
+      const haloGrad = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, p.size * 6);
+      haloGrad.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.25)`);
+      haloGrad.addColorStop(0.4, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.06)`);
+      haloGrad.addColorStop(1, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0)`);
       ctx.beginPath();
-      ctx.arc(pos.x, pos.y, p.size, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${p.opacity})`;
+      ctx.arc(pos.x, pos.y, p.size * 6, 0, Math.PI * 2);
+      ctx.fillStyle = haloGrad;
+      ctx.fill();
+      // Bright core
+      ctx.shadowColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 1)`;
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, p.size * 1.1, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${Math.min(rgb[0] + 80, 255)}, ${Math.min(rgb[1] + 80, 255)}, ${Math.min(rgb[2] + 80, 255)}, ${p.opacity})`;
+      ctx.fill();
+      // White-hot center
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, p.size * 0.4, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity * 0.7})`;
       ctx.fill();
       ctx.restore();
     });
