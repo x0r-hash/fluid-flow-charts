@@ -194,7 +194,19 @@ export default function FlowChartCanvas({
   const nodeMapRef = useRef<Map<string, FlowNode>>(new Map());
   const animatedValuesRef = useRef<Map<string, number>>(new Map());
   const timeRef = useRef<number>(0);
+  const lastFrameTimeRef = useRef<number>(0);
   const pulseWavesRef = useRef<PulseWave[]>([]);
+  const canvasSizeRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
+
+  // Store all render props in refs so draw callback is stable
+  const propsRef = useRef({
+    data, width, height, selectedNodeId, selectedNodeIds, selectedEdgeId,
+    selectedCategoryId, connectingFrom, hoveredNodeId, getNodeAnimations,
+  });
+  propsRef.current = {
+    data, width, height, selectedNodeId, selectedNodeIds, selectedEdgeId,
+    selectedCategoryId, connectingFrom, hoveredNodeId, getNodeAnimations,
+  };
 
   useEffect(() => {
     const map = new Map<string, FlowNode>();
@@ -236,18 +248,30 @@ export default function FlowChartCanvas({
     }
   }, [data]);
 
-  const draw = useCallback(() => {
+  const draw = useCallback((timestamp?: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    ctx.scale(dpr, dpr);
+    const { data, width, height, selectedNodeId, selectedNodeIds, selectedEdgeId,
+      selectedCategoryId, connectingFrom, hoveredNodeId, getNodeAnimations } = propsRef.current;
 
-    timeRef.current += 0.016;
+    // Delta time for smooth animation
+    const frameNow = timestamp || performance.now();
+    const dt = lastFrameTimeRef.current ? Math.min((frameNow - lastFrameTimeRef.current) / 1000, 0.05) : 0.016;
+    lastFrameTimeRef.current = frameNow;
+    const dpr = window.devicePixelRatio || 1;
+    const targetW = width * dpr;
+    const targetH = height * dpr;
+    if (canvasSizeRef.current.w !== targetW || canvasSizeRef.current.h !== targetH) {
+      canvas.width = targetW;
+      canvas.height = targetH;
+      canvasSizeRef.current = { w: targetW, h: targetH };
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    timeRef.current += dt;
     const time = timeRef.current;
 
     // === BACKGROUND ===
@@ -273,8 +297,8 @@ export default function FlowChartCanvas({
 
     // === FLOATING AMBIENT STARS ===
     ambientStarsRef.current.forEach((star) => {
-      star.x += star.vx;
-      star.y += star.vy;
+      star.x += star.vx * (dt / 0.016);
+      star.y += star.vy * (dt / 0.016);
       if (star.x < 0) star.x = width;
       if (star.x > width) star.x = 0;
       if (star.y < 0) star.y = height;
@@ -405,8 +429,8 @@ export default function FlowChartCanvas({
     // === PARTICLES with trails ===
     // Update pulse waves
     pulseWavesRef.current = pulseWavesRef.current.filter((pw) => {
-      pw.radius += 2.5;
-      pw.opacity -= 0.015;
+      pw.radius += 2.5 * (dt / 0.016);
+      pw.opacity -= 0.015 * (dt / 0.016);
       return pw.opacity > 0 && pw.radius < pw.maxRadius;
     });
 
@@ -420,7 +444,7 @@ export default function FlowChartCanvas({
     });
 
     particlesRef.current.forEach((p) => {
-      const prevT = p.t;
+      p.t += p.speed * (dt / 0.016);
       p.t += p.speed;
       if (p.t > 1) {
         p.t -= 1;
@@ -859,9 +883,10 @@ export default function FlowChartCanvas({
     }
 
     animRef.current = requestAnimationFrame(draw);
-  }, [data, width, height, selectedNodeId, selectedNodeIds, selectedEdgeId, selectedCategoryId, connectingFrom, hoveredNodeId, getNodeAnimations]);
+  }, []);
 
   useEffect(() => {
+    lastFrameTimeRef.current = 0;
     animRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animRef.current);
   }, [draw]);
