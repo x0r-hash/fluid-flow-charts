@@ -40,30 +40,30 @@ export default function FlowTooltip({ node, mouseX, mouseY, flowData }: FlowTool
       }}
     >
       <div
-        className="backdrop-blur-xl border rounded-xl px-4 py-3 shadow-2xl min-w-[200px] max-w-[280px] font-mono text-xs"
+        className="backdrop-blur-xl border rounded-lg px-4 py-3 shadow-elevated min-w-[220px] max-w-[300px] font-mono text-xs space-y-2"
         style={{
-          background: "hsla(222, 47%, 8%, 0.92)",
-          borderColor: `${accentColor}33`,
-          boxShadow: `0 0 30px ${accentColor}15, 0 8px 32px hsla(0,0%,0%,0.5)`,
+          background: "hsla(222, 47%, 8%, 0.95)",
+          borderColor: `${accentColor}40`,
+          boxShadow: `0 0 32px ${accentColor}20, 0 12px 40px hsla(0,0%,0%,0.6)`,
         }}
       >
         {/* Header */}
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2.5">
           <span
-            className="w-2.5 h-2.5 rounded-full inline-block ring-2 ring-offset-1 ring-offset-transparent"
+            className="w-3 h-3 rounded-full inline-block ring-2 ring-offset-1.5 flex-shrink-0"
             style={{
               backgroundColor: accentColor,
-              boxShadow: `0 0 8px ${accentColor}`,
-              borderColor: `${accentColor}40`,
+              boxShadow: `0 0 12px ${accentColor}`,
+              ringOffsetColor: "hsla(222, 47%, 8%, 0.95)",
             }}
           />
           <span className="text-foreground font-bold text-sm truncate flex-1">
             {node.label}
           </span>
           <span
-            className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full font-semibold"
+            className="text-[9px] uppercase tracking-wider px-2 py-1 rounded-md font-semibold flex-shrink-0 whitespace-nowrap"
             style={{
-              background: `${accentColor}18`,
+              background: `${accentColor}20`,
               color: accentColor,
             }}
           >
@@ -74,44 +74,54 @@ export default function FlowTooltip({ node, mouseX, mouseY, flowData }: FlowTool
         {/* Value */}
         {node.value !== undefined && (
           <div
-            className="text-2xl font-bold mb-1 tracking-tight"
-            style={{ color: accentColor, textShadow: `0 0 12px ${accentColor}60` }}
+            className="text-2xl font-bold tracking-tighter"
+            style={{ color: accentColor, textShadow: `0 0 16px ${accentColor}50` }}
           >
             {node.value}
           </div>
         )}
 
         {node.subLabel && (
-          <div className="text-[10px] text-muted-foreground mb-1 opacity-80">{node.subLabel}</div>
+          <div className="text-[10px] text-muted-foreground opacity-70">{node.subLabel}</div>
         )}
 
         {/* Connections */}
-        <div
-          className="border-t pt-2 mt-2 space-y-1 text-muted-foreground"
-          style={{ borderColor: "hsla(210, 20%, 30%, 0.3)" }}
-        >
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] opacity-50">OUT</span>
-            <span className="text-foreground font-semibold">{outgoingEdges.length}</span>
-            <span className="truncate text-[10px] opacity-60">
-              {outgoingEdges.slice(0, 2).map((e) => getNodeLabel(e.to)).join(", ")}
-              {outgoingEdges.length > 2 ? "…" : ""}
-            </span>
+        {(incomingEdges.length > 0 || outgoingEdges.length > 0) && (
+          <div
+            className="border-t pt-2 space-y-1.5 text-muted-foreground"
+            style={{ borderColor: "hsla(210, 20%, 30%, 0.4)" }}
+          >
+            {outgoingEdges.length > 0 && (
+              <div className="flex items-start gap-2">
+                <span className="text-[10px] opacity-50 font-semibold flex-shrink-0 pt-0.5">OUT</span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-foreground font-bold">{outgoingEdges.length}</span>
+                  <span className="text-[10px] opacity-60 ml-1">
+                    {outgoingEdges.slice(0, 2).map((e) => getNodeLabel(e.to)).join(", ")}
+                    {outgoingEdges.length > 2 ? "…" : ""}
+                  </span>
+                </div>
+              </div>
+            )}
+            {incomingEdges.length > 0 && (
+              <div className="flex items-start gap-2">
+                <span className="text-[10px] opacity-50 font-semibold flex-shrink-0 pt-0.5">IN</span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-foreground font-bold">{incomingEdges.length}</span>
+                  <span className="text-[10px] opacity-60 ml-1">
+                    {incomingEdges.slice(0, 2).map((e) => getNodeLabel(e.from)).join(", ")}
+                    {incomingEdges.length > 2 ? "…" : ""}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] opacity-50">IN</span>
-            <span className="text-foreground font-semibold">{incomingEdges.length}</span>
-            <span className="truncate text-[10px] opacity-60">
-              {incomingEdges.slice(0, 2).map((e) => getNodeLabel(e.from)).join(", ")}
-              {incomingEdges.length > 2 ? "…" : ""}
-            </span>
-          </div>
-        </div>
+        )}
 
         {/* Coordinates */}
-        <div className="mt-1.5 text-[9px] text-muted-foreground opacity-40">
-          x:{Math.round(node.x)} y:{Math.round(node.y)}
-          {node.size && ` · r:${node.size}`}
+        <div className="text-[9px] text-muted-foreground opacity-50 pt-1 border-t" style={{ borderColor: "hsla(210, 20%, 30%, 0.3)" }}>
+          <span>x:{Math.round(node.x)} · y:{Math.round(node.y)}</span>
+          {node.size && <span className="ml-2">r:{node.size}</span>}
         </div>
       </div>
     </div>

@@ -816,7 +816,7 @@ export default function FlowChartCanvas({
     <canvas
       ref={canvasRef}
       style={{ width, height, cursor: connectingFrom ? "crosshair" : "default" }}
-      className="rounded-lg"
+      className="rounded-lg shadow-elevated border border-border/50"
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}

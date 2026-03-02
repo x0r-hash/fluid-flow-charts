@@ -67,14 +67,60 @@
   body {
     @apply bg-background text-foreground font-sans;
     font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   code, .font-mono {
     font-family: 'JetBrains Mono', monospace;
   }
+
+  /* Better typography */
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight font-semibold;
+  }
+
+  h1 {
+    @apply text-4xl;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    @apply text-2xl;
+    letter-spacing: -0.015em;
+  }
+
+  /* Smooth focus state for better accessibility */
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary/50 ring-offset-2 ring-offset-background;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 @layer utilities {
+  /* Enhanced shadow system - professional layered shadows */
+  .shadow-soft {
+    box-shadow: 0 2px 4px rgb(0 0 0 / 0.05), 0 4px 8px rgb(0 0 0 / 0.1);
+  }
+
+  .shadow-medium {
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.08), 0 8px 24px rgb(0 0 0 / 0.12);
+  }
+
+  .shadow-elevated {
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.12), 0 16px 48px rgb(0 0 0 / 0.15);
+  }
+
+  .shadow-xl-soft {
+    box-shadow: 0 12px 32px rgb(0 0 0 / 0.15), 0 20px 64px rgb(0 0 0 / 0.2);
+  }
+
+  /* Glow effects */
   .glow-cyan {
     box-shadow: 0 0 12px hsl(var(--glow-cyan) / 0.4), 0 0 40px hsl(var(--glow-cyan) / 0.15);
   }
@@ -84,6 +130,7 @@
   .glow-green {
     box-shadow: 0 0 12px hsl(var(--glow-green) / 0.4), 0 0 40px hsl(var(--glow-green) / 0.15);
   }
+  
   .text-glow-cyan {
     text-shadow: 0 0 10px hsl(var(--glow-cyan) / 0.6);
   }
@@ -92,5 +139,120 @@
   }
   .text-glow-green {
     text-shadow: 0 0 10px hsl(var(--glow-green) / 0.6);
+  }
+
+  /* Glass-morphism effect */
+  .glass-effect {
+    background: hsl(222 47% 9% / 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(222 30% 18% / 0.5);
+  }
+
+  .glass-effect-strong {
+    background: hsl(222 47% 9% / 0.8);
+    backdrop-filter: blur(16px);
+    border: 1px solid hsl(222 30% 22% / 0.6);
+  }
+
+  /* Smooth transitions */
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .transition-fast {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Gradient overlays */
+  .gradient-overlay {
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.1) 0%, hsl(var(--secondary) / 0.05) 100%);
+  }
+
+  .gradient-subtle {
+    background: linear-gradient(180deg, hsl(222 47% 6% / 0) 0%, hsl(222 47% 4% / 0.4) 100%);
+  }
+
+  /* Pulse animation for status indicators */
+  @keyframes pulse-glow {
+    0%, 100% {
+      opacity: 1;
+      box-shadow: 0 0 0 0 currentColor;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Shimmer animation for loading states */
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+    100% {
+      background-position: 1000px 0;
+    }
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(222 47% 9%) 25%,
+      hsl(222 47% 15%) 50%,
+      hsl(222 47% 9%) 75%
+    );
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  /* Smooth hover state utilities */
+  .hover-lift {
+    @apply transition-smooth hover:shadow-elevated hover:-translate-y-1;
+  }
+
+  .hover-glow {
+    @apply transition-smooth hover:shadow-lg;
+  }
+
+  /* Text utilities */
+  .font-semibold-tight {
+    @apply font-semibold tracking-tight;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer components {
+  /* Improved button-like interactive elements */
+  .btn-interactive {
+    @apply transition-smooth cursor-pointer select-none;
+  }
+
+  .btn-interactive:hover {
+    @apply shadow-medium;
+  }
+
+  .btn-interactive:active {
+    @apply shadow-soft scale-95;
+  }
+
+  /* Card with enhanced depth */
+  .card-elevated {
+    @apply bg-card shadow-elevated rounded-lg border border-border/50 p-6;
+  }
+
+  /* Smooth divider */
+  .divider-smooth {
+    @apply bg-gradient-to-r from-border via-border to-border/0;
+  }
+
+  /* Badge with improved styling */
+  .badge-modern {
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-muted/50 text-muted-foreground border border-border/50 backdrop-blur-sm;
   }
 }

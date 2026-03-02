@@ -15,34 +15,36 @@ const navItems: NavItem[] = [
 
 export default function DashboardNav() {
   return (
-    <header className="flex items-center justify-between px-6 py-3 border-b border-border bg-card">
-      <div className="flex items-center gap-8">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center">
-            <Activity className="w-5 h-5 text-primary" />
+    <header className="sticky top-0 z-50 border-b border-border/50 bg-card/50 backdrop-blur-xl shadow-medium">
+      <div className="flex items-center justify-between px-6 py-3.5">
+        <div className="flex items-center gap-8">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center ring-1 ring-primary/20 transition-smooth hover:ring-primary/40">
+              <Activity className="w-5 h-5 text-primary" />
+            </div>
+            <span className="font-mono font-bold text-foreground text-lg tracking-tighter bg-clip-text">
+              DetectFlow
+            </span>
           </div>
-          <span className="font-mono font-bold text-foreground text-lg tracking-tight">
-            DetectFlow
-          </span>
+          <nav className="hidden md:flex items-center gap-2">
+            {navItems.map((item) => (
+              <button
+                key={item.label}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-smooth ${
+                  item.active
+                    ? "bg-muted text-primary shadow-soft"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                }`}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            ))}
+          </nav>
         </div>
-        <nav className="flex items-center gap-1">
-          {navItems.map((item) => (
-            <button
-              key={item.label}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                item.active
-                  ? "bg-muted text-primary text-glow-cyan"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              }`}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-      <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-semibold text-muted-foreground border border-border">
-        AD
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent/30 to-primary/20 flex items-center justify-center text-xs font-bold text-primary border border-border/50 ring-1 ring-accent/20 cursor-pointer transition-smooth hover:ring-accent/40 hover:shadow-soft">
+          AD
+        </div>
       </div>
     </header>
   );

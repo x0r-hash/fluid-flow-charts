@@ -245,15 +245,16 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <div className="flex justify-between items-center">
-        <DashboardNav />
+      <DashboardNav />
+      <div className="flex justify-between items-center px-6 py-3 border-b border-border/50">
+        <div></div>
         <DataManager
           data={editor.flowData}
           onDataChange={handleDataChange}
           onReset={handleReset}
         />
       </div>
-      <main ref={containerRef} className="flex-1 overflow-hidden p-2 relative">
+      <main ref={containerRef} className="flex-1 overflow-hidden p-4 relative bg-gradient-subtle">
         <FlowContextMenu
           targetNode={contextTarget.node}
           targetEdge={contextTarget.edge}
