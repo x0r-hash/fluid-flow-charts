@@ -173,6 +173,100 @@ function drawHexagon(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: n
   ctx.closePath();
 }
 
+function drawDiamond(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - r);
+  ctx.lineTo(cx + r * 0.85, cy);
+  ctx.lineTo(cx, cy + r);
+  ctx.lineTo(cx - r * 0.85, cy);
+  ctx.closePath();
+}
+
+function drawParallelogram(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
+  const w = r * 1.8;
+  const h = r * 1.1;
+  const skew = r * 0.35;
+  ctx.beginPath();
+  ctx.moveTo(cx - w / 2 + skew, cy - h / 2);
+  ctx.lineTo(cx + w / 2 + skew, cy - h / 2);
+  ctx.lineTo(cx + w / 2 - skew, cy + h / 2);
+  ctx.lineTo(cx - w / 2 - skew, cy + h / 2);
+  ctx.closePath();
+}
+
+function drawTriangle(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
+  ctx.beginPath();
+  for (let i = 0; i < 3; i++) {
+    const angle = (Math.PI * 2 / 3) * i - Math.PI / 2;
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+
+function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
+  const spikes = 5;
+  const innerR = r * 0.45;
+  ctx.beginPath();
+  for (let i = 0; i < spikes * 2; i++) {
+    const angle = (Math.PI / spikes) * i - Math.PI / 2;
+    const radius = i % 2 === 0 ? r : innerR;
+    const x = cx + radius * Math.cos(angle);
+    const y = cy + radius * Math.sin(angle);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+
+function drawPentagon(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+
+function drawOctagon(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const angle = (Math.PI / 4) * i - Math.PI / 8;
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+
+function drawShape(ctx: CanvasRenderingContext2D, shape: string, cx: number, cy: number, r: number) {
+  switch (shape) {
+    case "diamond": drawDiamond(ctx, cx, cy, r); break;
+    case "hexagon": drawHexagon(ctx, cx, cy, r); break;
+    case "parallelogram": drawParallelogram(ctx, cx, cy, r); break;
+    case "triangle": drawTriangle(ctx, cx, cy, r); break;
+    case "star": drawStar(ctx, cx, cy, r); break;
+    case "pentagon": drawPentagon(ctx, cx, cy, r); break;
+    case "octagon": drawOctagon(ctx, cx, cy, r); break;
+    case "rectangle": {
+      const w = r * 2;
+      const h = r * 1.4;
+      drawRoundedRect(ctx, cx - w / 2, cy - h / 2, w, h, 12);
+      break;
+    }
+    default: // circle
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      break;
+  }
+}
+
 export default function FlowChartCanvas({
   data,
   width = 1200,
@@ -721,8 +815,10 @@ export default function FlowChartCanvas({
           ? Math.floor(animatedValuesRef.current.get(node.id) || 0)
           : node.value;
 
+        const isPolygonShape = shape !== "circle";
+
+        // === PULSING RINGS ===
         if (shape === "circle") {
-          // === PULSING RINGS ===
           const ringCount = 3;
           for (let ri = 0; ri < ringCount; ri++) {
             const phase = (time * 0.8 + ri * 0.7) % 3;
@@ -736,43 +832,62 @@ export default function FlowChartCanvas({
               ctx.stroke();
             }
           }
+        } else {
+          // Pulse rings for polygon shapes — scale outward
+          const ringCount = 3;
+          for (let ri = 0; ri < ringCount; ri++) {
+            const phase = (time * 0.8 + ri * 0.7) % 3;
+            if (phase < 2) {
+              const ringR = size + phase * 18;
+              const ringAlpha = (1 - phase / 2) * 0.1;
+              ctx.save();
+              drawShape(ctx, shape, node.x, node.y, ringR);
+              ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${ringAlpha})`;
+              ctx.lineWidth = 1;
+              ctx.stroke();
+              ctx.restore();
+            }
+          }
+        }
 
-          // Selection ring
-          if (isSelected || isConnecting) {
+        // Selection ring
+        if (isSelected || isConnecting) {
+          if (shape === "circle") {
             ctx.beginPath();
             ctx.arc(node.x, node.y, size + 10, 0, Math.PI * 2);
-            ctx.strokeStyle = COLOR_MAP_SELECTED[color];
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            const dashOffset = time * 30;
-            ctx.lineDashOffset = -dashOffset;
-            ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.lineDashOffset = 0;
+          } else {
+            drawShape(ctx, shape, node.x, node.y, size + 10);
           }
-
-          // Outer glow ring
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, size + 2, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${isHovered ? 0.5 : 0.2})`;
-          ctx.lineWidth = 1;
+          ctx.strokeStyle = COLOR_MAP_SELECTED[color];
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 5]);
+          ctx.lineDashOffset = -(time * 30);
           ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.lineDashOffset = 0;
+        }
 
-          // Inner fill with radial gradient
-          const innerGrad = ctx.createRadialGradient(
-            node.x - size * 0.2, node.y - size * 0.2, 0,
-            node.x, node.y, size
-          );
-          innerGrad.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.06)`);
-          innerGrad.addColorStop(0.6, "hsla(222, 47%, 7%, 0.95)");
-          innerGrad.addColorStop(1, "hsla(222, 47%, 4%, 0.98)");
+        // Outer glow ring
+        drawShape(ctx, shape, node.x, node.y, size + 2);
+        ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${isHovered ? 0.5 : 0.2})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
 
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, size, 0, Math.PI * 2);
-          ctx.fillStyle = innerGrad;
-          ctx.fill();
+        // Inner fill with radial gradient
+        const innerGrad = ctx.createRadialGradient(
+          node.x - size * 0.2, node.y - size * 0.2, 0,
+          node.x, node.y, size
+        );
+        innerGrad.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.06)`);
+        innerGrad.addColorStop(0.6, "hsla(222, 47%, 7%, 0.95)");
+        innerGrad.addColorStop(1, "hsla(222, 47%, 4%, 0.98)");
 
-          // Border with gradient arc (partial border effect)
+        drawShape(ctx, shape, node.x, node.y, size);
+        ctx.fillStyle = innerGrad;
+        ctx.fill();
+
+        // Border with animated partial effect
+        if (shape === "circle") {
           ctx.beginPath();
           const arcStart = -Math.PI / 2 + time * 0.3;
           ctx.arc(node.x, node.y, size, arcStart, arcStart + Math.PI * 1.5);
@@ -780,78 +895,70 @@ export default function FlowChartCanvas({
           ctx.lineWidth = 1.5;
           ctx.stroke();
 
-          // Remaining arc dimmer
           ctx.beginPath();
           ctx.arc(node.x, node.y, size, arcStart + Math.PI * 1.5, arcStart + Math.PI * 2);
           ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.1)`;
           ctx.lineWidth = 1.5;
           ctx.stroke();
-
-          // Ambient glow
-          if (isHovered) {
-            const glowGrad = ctx.createRadialGradient(node.x, node.y, size * 0.8, node.x, node.y, size * 1.8);
-            glowGrad.addColorStop(0, "transparent");
-            glowGrad.addColorStop(1, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.06)`);
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, size * 1.8, 0, Math.PI * 2);
-            ctx.fillStyle = glowGrad;
-            ctx.fill();
-          }
-
         } else {
-          // === RECTANGLE / HEXAGONAL HYBRID ===
-          const rectW = size * 2;
-          const rectH = size * 1.4;
-          const rectX = node.x - rectW / 2;
-          const rectY = node.y - rectH / 2;
-          const cornerR = 12;
-
-          // Selection
-          if (isSelected || isConnecting) {
-            drawRoundedRect(ctx, rectX - 6, rectY - 6, rectW + 12, rectH + 12, cornerR + 4);
-            ctx.strokeStyle = COLOR_MAP_SELECTED[color];
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            const dashOffset = time * 30;
-            ctx.lineDashOffset = -dashOffset;
-            ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.lineDashOffset = 0;
-          }
-
-          // Background
-          const rectGrad = ctx.createLinearGradient(rectX, rectY, rectX + rectW, rectY + rectH);
-          rectGrad.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.06)`);
-          rectGrad.addColorStop(1, "hsla(222, 47%, 5%, 0.95)");
-
-          drawRoundedRect(ctx, rectX, rectY, rectW, rectH, cornerR);
-          ctx.fillStyle = rectGrad;
-          ctx.fill();
-
-          // Animated border (top edge brighter)
-          drawRoundedRect(ctx, rectX, rectY, rectW, rectH, cornerR);
-          ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.4)`;
+          // Animated dashed border for polygon shapes
+          drawShape(ctx, shape, node.x, node.y, size);
+          ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.5)`;
           ctx.lineWidth = 1.5;
+          ctx.setLineDash([8, 4]);
+          ctx.lineDashOffset = -(time * 20);
           ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.lineDashOffset = 0;
 
-          // Top accent line
+          // Solid subtle overlay
+          drawShape(ctx, shape, node.x, node.y, size);
+          ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.15)`;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+
+        // Hover glow
+        if (isHovered) {
+          ctx.save();
+          ctx.shadowColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3)`;
+          ctx.shadowBlur = 20;
+          drawShape(ctx, shape, node.x, node.y, size);
+          ctx.strokeStyle = "transparent";
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Inner decorative details for special shapes
+        if (shape === "hexagon" || shape === "octagon") {
+          // Inner concentric shape
+          drawShape(ctx, shape, node.x, node.y, size * 0.6);
+          ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.08)`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+        if (shape === "star") {
+          // Inner star rotation
+          ctx.save();
+          ctx.translate(node.x, node.y);
+          ctx.rotate(time * 0.2);
+          ctx.translate(-node.x, -node.y);
+          drawShape(ctx, "star", node.x, node.y, size * 0.5);
+          ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.12)`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+          ctx.restore();
+        }
+        if (shape === "diamond") {
+          // Cross-hair lines inside diamond
           ctx.beginPath();
-          ctx.moveTo(rectX + cornerR, rectY);
-          ctx.lineTo(rectX + rectW - cornerR, rectY);
-          ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.6)`;
-          ctx.lineWidth = 2;
+          ctx.moveTo(node.x, node.y - size * 0.4);
+          ctx.lineTo(node.x, node.y + size * 0.4);
+          ctx.moveTo(node.x - size * 0.35, node.y);
+          ctx.lineTo(node.x + size * 0.35, node.y);
+          ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.06)`;
+          ctx.lineWidth = 0.5;
           ctx.stroke();
-
-          // Hover glow
-          if (isHovered) {
-            ctx.save();
-            ctx.shadowColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3)`;
-            ctx.shadowBlur = 20;
-            drawRoundedRect(ctx, rectX, rectY, rectW, rectH, cornerR);
-            ctx.strokeStyle = "transparent";
-            ctx.stroke();
-            ctx.restore();
-          }
         }
 
         // === VALUE TEXT ===
@@ -873,7 +980,7 @@ export default function FlowChartCanvas({
           const slW = ctx.measureText(node.subLabel).width + 10;
           const slH = 14;
           const slX = node.x - slW / 2;
-          const slY = node.y - (node.shape === "circle" ? 24 : 28);
+          const slY = node.y - size * 0.45 - 16;
 
           drawRoundedRect(ctx, slX, slY, slW, slH, 7);
           ctx.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.15)`;
@@ -890,16 +997,15 @@ export default function FlowChartCanvas({
         ctx.fillStyle = "hsl(210, 20%, 55%)";
         ctx.textAlign = "center";
         ctx.textBaseline = "alphabetic";
-        ctx.fillText(node.label, node.x, node.y + (node.shape === "circle" ? 22 : (node.size || 60) * 0.7 + 14));
+        ctx.fillText(node.label, node.x, node.y + size + 14);
 
         // Status indicator dot (top-left)
-        const dotOffset = node.shape === "circle" ? size * 0.65 : (node.size || 60) * 0.85;
+        const dotOffset = size * 0.65;
         ctx.beginPath();
         ctx.arc(node.x - dotOffset + 6, node.y - dotOffset + 12, 3.5, 0, Math.PI * 2);
         ctx.fillStyle = coreColor;
         ctx.fill();
 
-        // Tiny glow on status dot
         ctx.beginPath();
         ctx.arc(node.x - dotOffset + 6, node.y - dotOffset + 12, 6, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.15)`;

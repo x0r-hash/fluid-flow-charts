@@ -8,7 +8,7 @@ export interface FlowNode {
   subLabel?: string;
   color?: "cyan" | "purple" | "green" | "orange" | "red" | "yellow" | "blue" | "pink" | "gray" | "lime";
   size?: number;
-  shape?: "circle" | "rectangle";
+  shape?: "circle" | "rectangle" | "diamond" | "hexagon" | "parallelogram" | "triangle" | "star" | "pentagon" | "octagon";
   animateValue?: boolean;
   animationSpeed?: number;
 }

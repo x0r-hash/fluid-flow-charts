@@ -50,11 +50,11 @@ export default function FlowTooltip({ node, mouseX, mouseY, flowData }: FlowTool
         {/* Header */}
         <div className="flex items-center gap-2.5">
           <span
-            className="w-3 h-3 rounded-full inline-block ring-2 ring-offset-1.5 flex-shrink-0"
+            className="w-3 h-3 rounded-full inline-block ring-2 ring-offset-1 flex-shrink-0"
             style={{
               backgroundColor: accentColor,
               boxShadow: `0 0 12px ${accentColor}`,
-              ringOffsetColor: "hsla(222, 47%, 8%, 0.95)",
+              outlineColor: "hsla(222, 47%, 8%, 0.95)",
             }}
           />
           <span className="text-foreground font-bold text-sm truncate flex-1">
