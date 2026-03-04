@@ -23,13 +23,13 @@ export const mockFlowData: FlowData = {
     { id: "proc-tagged", label: "TAGGED/SEC", x: 760, y: 210, type: "metric", value: "41", color: "purple", size: 70, shape: "circle" },
 
     // Rules nodes
-    { id: "rules-1", label: "# RULES", x: 380, y: 380, type: "metric", value: "6500", color: "green", size: 60, shape: "circle" },
-    { id: "rules-2", label: "# RULES", x: 380, y: 520, type: "metric", value: "3000", color: "green", size: 60, shape: "rectangle" },
-    { id: "rules-staging", label: "STAGING STATS", x: 570, y: 520, type: "metric", value: "1245", subLabel: "+25", color: "green", size: 70, shape: "circle" },
-    { id: "rules-deployed", label: "RULES DEPLOYED", x: 760, y: 520, type: "metric", value: "1500", color: "green", size: 70, shape: "rectangle", animateValue: true, animationSpeed: 1 },
+    { id: "rules-1", label: "# RULES", x: 380, y: 380, type: "metric", value: "6500", color: "green", size: 60, shape: "hexagon" },
+    { id: "rules-2", label: "# RULES", x: 380, y: 520, type: "metric", value: "3000", color: "green", size: 60, shape: "diamond" },
+    { id: "rules-staging", label: "STAGING STATS", x: 570, y: 520, type: "metric", value: "1245", subLabel: "+25", color: "green", size: 70, shape: "pentagon" },
+    { id: "rules-deployed", label: "RULES DEPLOYED", x: 760, y: 520, type: "metric", value: "1500", color: "green", size: 70, shape: "star", animateValue: true, animationSpeed: 1 },
 
     // MITRE node
-    { id: "mitre", label: "MITRE T&E", x: 760, y: 370, type: "process", subLabel: "ATTACK CHAIN", color: "purple", size: 65 },
+    { id: "mitre", label: "MITRE T&E", x: 760, y: 370, type: "process", subLabel: "ATTACK CHAIN", color: "purple", size: 65, shape: "octagon" },
 
     // Repository nodes
     { id: "repo-1", label: "SOC Prime Premium Rules", x: 80, y: 440, type: "source", color: "green" },

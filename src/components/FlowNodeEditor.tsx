@@ -135,13 +135,20 @@ export default function FlowNodeEditor({ node, onSave, onClose }: FlowNodeEditor
 
               <div className="space-y-2">
                 <Label className="text-muted-foreground text-xs font-mono">SHAPE</Label>
-                <Select value={form.shape || "circle"} onValueChange={(v) => update("shape", v as "circle" | "rectangle")}>
+                <Select value={form.shape || "circle"} onValueChange={(v) => update("shape", v as FlowNode["shape"])}>
                   <SelectTrigger className="bg-background border-border font-mono text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="circle">Circle</SelectItem>
-                    <SelectItem value="rectangle">Rectangle</SelectItem>
+                    <SelectItem value="circle">⬤ Circle</SelectItem>
+                    <SelectItem value="rectangle">▬ Rectangle</SelectItem>
+                    <SelectItem value="diamond">◆ Diamond</SelectItem>
+                    <SelectItem value="hexagon">⬡ Hexagon</SelectItem>
+                    <SelectItem value="triangle">▲ Triangle</SelectItem>
+                    <SelectItem value="star">★ Star</SelectItem>
+                    <SelectItem value="pentagon">⬠ Pentagon</SelectItem>
+                    <SelectItem value="octagon">⯃ Octagon</SelectItem>
+                    <SelectItem value="parallelogram">▱ Parallelogram</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
