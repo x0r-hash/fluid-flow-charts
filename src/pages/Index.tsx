@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import DashboardNav from "@/components/DashboardNav";
 import FlowChartCanvas from "@/components/FlowChartCanvas";
 import FlowNodeEditor from "@/components/FlowNodeEditor";
+import FlowEdgeEditor from "@/components/FlowEdgeEditor";
 import FlowCategoryEditor from "@/components/FlowCategoryEditor";
 import FlowContextMenu from "@/components/FlowContextMenu";
 import FlowTooltip from "@/components/FlowTooltip";
@@ -182,11 +183,14 @@ const Index = () => {
       const pos = getCanvasPos(e);
       const node = editor.findNodeAt(pos.x, pos.y);
       const category = editor.findCategoryAt(pos.x, pos.y);
+      const edge = !node && !category ? editor.findEdgeAt(pos.x, pos.y) : null;
 
       if (node) {
         editor.openEditNode(node.id);
       } else if (category) {
         editor.openEditCategory(category.id);
+      } else if (edge) {
+        editor.openEditEdge(edge.id);
       }
     },
     [editor, getCanvasPos]
@@ -293,6 +297,7 @@ const Index = () => {
             onChangeNodeColor={editor.changeNodeColor}
             onAddNode={handleAddNode}
             onDeleteEdge={handleDeleteEdge}
+            onEditEdge={editor.openEditEdge}
             onChangeEdgeColor={editor.changeEdgeColor}
             onStartConnect={handleStartConnect}
             onAddCategory={handleAddCategory}
@@ -341,6 +346,16 @@ const Index = () => {
               category={editor.state.editingCategory}
               onSave={editor.saveEditCategory}
               onClose={editor.closeEditCategory}
+            />
+          )}
+
+          {editor.state.editingEdge && (
+            <FlowEdgeEditor
+              edge={editor.state.editingEdge}
+              fromLabel={editor.flowData.nodes.find(n => n.id === editor.state.editingEdge?.from)?.label || "Unknown"}
+              toLabel={editor.flowData.nodes.find(n => n.id === editor.state.editingEdge?.to)?.label || "Unknown"}
+              onSave={editor.saveEditEdge}
+              onClose={editor.closeEditEdge}
             />
           )}
 

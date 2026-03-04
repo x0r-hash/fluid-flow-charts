@@ -43,6 +43,7 @@ interface FlowContextMenuProps {
   onChangeNodeColor: (nodeId: string, color: ColorOption) => void;
   onAddNode: (x: number, y: number, type: FlowNode["type"]) => void;
   onDeleteEdge: (edgeId: string) => void;
+  onEditEdge: (edgeId: string) => void;
   onChangeEdgeColor: (edgeId: string, color: ColorOption) => void;
   onStartConnect: (nodeId: string) => void;
   onAddCategory: (x: number, y: number, color: ColorOption) => void;
@@ -61,6 +62,7 @@ export default function FlowContextMenu({
   onChangeNodeColor,
   onAddNode,
   onDeleteEdge,
+  onEditEdge,
   onChangeEdgeColor,
   onStartConnect,
   onAddCategory,
@@ -137,6 +139,13 @@ export default function FlowContextMenu({
           </>
         ) : targetEdge ? (
           <>
+            <ContextMenuItem
+              onClick={() => onEditEdge(targetEdge.id)}
+              className="gap-2 cursor-pointer"
+            >
+              <Pencil className="w-4 h-4" />
+              Edit Connection
+            </ContextMenuItem>
             <ContextMenuSub>
               <ContextMenuSubTrigger className="gap-2 cursor-pointer">
                 <Palette className="w-4 h-4" />

@@ -20,6 +20,7 @@ export interface FlowEditorState {
   isDraggingCategories: boolean; // Track if dragging categories vs nodes
   connectingFrom: string | null;
   editingNode: FlowNode | null;
+  editingEdge: FlowEdge | null;
   editingCategory: FlowCategory | null;
   hoveredNodeId: string | null;
 }
@@ -36,6 +37,7 @@ export function useFlowEditor(initialData: FlowData) {
     isDraggingCategories: false,
     connectingFrom: null,
     editingNode: null,
+    editingEdge: null,
     editingCategory: null,
     hoveredNodeId: null,
   });
@@ -347,6 +349,31 @@ export function useFlowEditor(initialData: FlowData) {
     [pushUndo]
   );
 
+  // Edit edge
+  const openEditEdge = useCallback(
+    (edgeId: string) => {
+      const edge = flowData.edges.find((e) => e.id === edgeId);
+      if (edge) setState((s) => ({ ...s, editingEdge: { ...edge } }));
+    },
+    [flowData.edges]
+  );
+
+  const closeEditEdge = useCallback(() => {
+    setState((s) => ({ ...s, editingEdge: null }));
+  }, []);
+
+  const saveEditEdge = useCallback(
+    (updatedEdge: FlowEdge) => {
+      pushUndo();
+      setFlowData((prev) => ({
+        ...prev,
+        edges: prev.edges.map((e) => (e.id === updatedEdge.id ? updatedEdge : e)),
+      }));
+      setState((s) => ({ ...s, editingEdge: null }));
+    },
+    [pushUndo]
+  );
+
   // Add node with animation
   const addNode = useCallback(
     (x: number, y: number, type: FlowNode["type"] = "source") => {
@@ -529,6 +556,7 @@ export function useFlowEditor(initialData: FlowData) {
       isDraggingCategories: false,
       connectingFrom: null,
       editingNode: null,
+      editingEdge: null,
       editingCategory: null,
       hoveredNodeId: null,
     });
@@ -553,6 +581,9 @@ export function useFlowEditor(initialData: FlowData) {
     openEditNode,
     closeEditNode,
     saveEditNode,
+    openEditEdge,
+    closeEditEdge,
+    saveEditEdge,
     openEditCategory,
     closeEditCategory,
     saveEditCategory,
