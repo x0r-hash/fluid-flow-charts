@@ -509,19 +509,21 @@ export default function FlowChartCanvas({
       // Edge label with pill background
       if (edge.label) {
         const mid = getPointOnCurve(from, to, 0.5);
+        const labelColor = edge.labelColor || color;
+        const labelRgb = COLOR_RGB[labelColor] || COLOR_RGB.cyan;
         ctx.font = "600 9px 'JetBrains Mono', monospace";
         const tw = ctx.measureText(edge.label).width;
         const pillW = tw + 14;
         const pillH = 18;
 
         drawRoundedRect(ctx, mid.x - pillW / 2, mid.y - pillH / 2, pillW, pillH, 9);
-        ctx.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.1)`;
+        ctx.fillStyle = `rgba(${labelRgb[0]}, ${labelRgb[1]}, ${labelRgb[2]}, 0.1)`;
         ctx.fill();
-        ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3)`;
+        ctx.strokeStyle = `rgba(${labelRgb[0]}, ${labelRgb[1]}, ${labelRgb[2]}, 0.3)`;
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        ctx.fillStyle = COLOR_MAP_GLOW[color];
+        ctx.fillStyle = COLOR_MAP_GLOW[labelColor];
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(edge.label, mid.x, mid.y);
